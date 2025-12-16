@@ -33,3 +33,5 @@ go.work.sum
 .vscode/
 
 rust/xray/target/
+rust/xray/tests/outputs/
+
