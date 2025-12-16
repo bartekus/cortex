@@ -1,0 +1,20 @@
+[package]
+name = "xray"
+version = "0.1.0"
+edition = "2021"
+license = "AGPL-3.0-or-later"
+description = "Deterministic repository scanner for Stagecraft AI context"
+
+[dependencies]
+clap = { version = "4.4", features = ["derive"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = { version = "1.0", features = ["preserve_order"] }
+sha2 = "0.10"
+hex = "0.4"
+anyhow = "1.0" # For error handling convenience
+thiserror = "1.0"
+walkdir = "2.4"
+
+
+[dev-dependencies]
+tempfile = "3.8"

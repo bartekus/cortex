@@ -1,0 +1,12 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Test fixture for feature mapping validation
+#
+features:
+  - id: CLI_DEPLOY
+    title: "Deploy command (test fixture)"
+    status: done
+    spec: spec/commands/deploy.md
+    owner: test
+    tests: []
+

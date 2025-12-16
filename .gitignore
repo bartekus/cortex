@@ -29,5 +29,9 @@ go.work.sum
 .env
 
 # Editor/IDE
- .idea/
- .vscode/
+.idea/
+.vscode/
+
+rust/xray/target/
+rust/xray/tests/outputs/
+

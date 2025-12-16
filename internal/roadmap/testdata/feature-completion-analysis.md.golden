@@ -1,0 +1,98 @@
+# Feature Completion Analysis
+
+> **Source**: Generated from `spec/features.yaml` by `stagecraft status roadmap`
+> **Last Updated**: See `spec/features.yaml` for the source of truth
+>
+> **Note**: This document is automatically generated. To regenerate, run `stagecraft status roadmap`.
+
+⸻
+
+## Executive Summary
+
+- **Total Features**: 15
+- **Completed**: 8 (53.3%)
+- **In Progress**: 2 (13.3%)
+- **Planned**: 5 (33.3%)
+
+⸻
+
+## Phase-by-Phase Completion
+
+| Phase | Features | Done | WIP | Todo | Completion | Status |
+|-------|----------|------|-----|------|------------|--------|
+| **Architecture & Documentation** | 2 | 0 | 0 | 2 | 0% | ⚠️ Not started |
+| **Phase 0: Foundation** | 3 | 3 | 0 | 0 | 100% | ✅ Complete |
+| **Phase 1: Provider Interfaces** | 3 | 2 | 1 | 0 | 67% | 🔄 In progress |
+| **Phase 2: Core Orchestration** | 3 | 2 | 0 | 1 | 67% | 🔄 In progress |
+| **Phase 3: Local Development** | 2 | 0 | 1 | 1 | 0% | ⚠️ Not started |
+| **Governance** | 2 | 1 | 0 | 1 | 50% | 🔄 In progress |
+
+⸻
+
+## Roadmap Alignment
+
+### Strong Progress
+
+- ✅ **Phase 0: Foundation Complete**: All features done (3/3)
+- 🔄 **Phase 1: Provider Interfaces In Progress**: 66.7% complete (2/3 done, 1 wip)
+- 🔄 **Phase 2: Core Orchestration In Progress**: 66.7% complete (2/3 done)
+- 🔄 **Governance In Progress**: 50.0% complete (1/2 done)
+
+### Critical Gaps
+
+- ⚠️ **Architecture & Documentation**: 0% complete — not started
+- ⚠️ **Phase 3: Local Development**: 0% complete — not started
+
+⸻
+
+## Priority Recommendations
+
+### 🔥 Immediate (Unblocks Other Work)
+
+1. Complete `DEV_HOSTS` to unblock dependent features
+
+## Detailed Phase Analysis
+
+### Architecture & Documentation
+
+- Features: 2 (Done: 0, WIP: 0, Todo: 2)
+- Completion: 0.0%
+
+### Phase 0: Foundation
+
+- Features: 3 (Done: 3, WIP: 0, Todo: 0)
+- Completion: 100.0%
+
+### Phase 1: Provider Interfaces
+
+- Features: 3 (Done: 2, WIP: 1, Todo: 0)
+- Completion: 66.7%
+
+### Phase 2: Core Orchestration
+
+- Features: 3 (Done: 2, WIP: 0, Todo: 1)
+- Completion: 66.7%
+
+### Phase 3: Local Development
+
+- Features: 2 (Done: 0, WIP: 1, Todo: 1)
+- Completion: 0.0%
+
+### Governance
+
+- Features: 2 (Done: 1, WIP: 0, Todo: 1)
+- Completion: 50.0%
+
+⸻
+
+## Critical Path Analysis
+
+The following features are blocked by incomplete dependencies:
+
+- `DEV_HOSTS` blocked by: CLI_DEV
+
+## Next Steps
+
+1. Use `stagecraft status roadmap` to regenerate this document whenever `spec/features.yaml` changes.
+2. Prioritize unblocking critical-path features.
+3. Complete partially implemented phases before starting new ones.

@@ -1,0 +1,22 @@
+Cortex provides repository scanning, governance checks, and AI context generation tools.
+
+Usage:
+  cortex [command]
+
+Available Commands:
+  commit      Generate commit health report
+  commit      Generate commit discipline suggestions
+  completion  Generate the autocompletion script for the specified shell
+  context     AI context pipeline commands
+  feature     Generate feature traceability report
+  gov         Governance checks for Stagecraft
+  help        Help about any command
+  status      Show Stagecraft project status and roadmap analysis
+  version     Print the version number of Cortex
+  xray        Run XRAY scan
+
+Flags:
+  -h, --help      help for cortex
+  -v, --verbose   enable verbose output
+
+Use "cortex [command] --help" for more information about a command.
