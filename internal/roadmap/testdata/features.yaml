@@ -1,0 +1,132 @@
+# SPDX-License-Identifier: AGPL-3.0-or-later
+#
+# Test data for GOV_STATUS_ROADMAP feature tests
+#
+features:
+  # Architecture & Documentation
+  - id: ARCH_OVERVIEW
+    title: "Architecture documentation"
+    status: todo
+    spec: "overview.md"
+    owner: bart
+    tests: []
+
+  - id: DOCS_ADR
+    title: "ADR process"
+    status: todo
+    spec: "adr/0001-architecture.md"
+    owner: bart
+    tests: []
+
+  # Phase 0: Foundation
+  - id: CORE_CONFIG
+    title: "Config loading"
+    status: done
+    spec: "core/config.md"
+    owner: bart
+    tests:
+      - "pkg/config/config_test.go"
+
+  - id: CLI_INIT
+    title: "Project bootstrap"
+    status: done
+    spec: "commands/init.md"
+    owner: bart
+    tests:
+      - "internal/cli/commands/init_test.go"
+
+  - id: CORE_LOGGING
+    title: "Logging helpers"
+    status: done
+    spec: "core/logging.md"
+    owner: bart
+    tests:
+      - "pkg/logging/logging_test.go"
+
+  # Phase 1: Provider Interfaces
+  - id: PROVIDER_BACKEND_INTERFACE
+    title: "BackendProvider interface"
+    status: done
+    spec: "core/backend-registry.md"
+    owner: bart
+    tests:
+      - "pkg/providers/backend/backend_test.go"
+
+  - id: PROVIDER_FRONTEND_INTERFACE
+    title: "FrontendProvider interface"
+    status: done
+    spec: "providers/frontend/interface.md"
+    owner: bart
+    tests:
+      - "pkg/providers/frontend/frontend_test.go"
+
+  - id: PROVIDER_NETWORK_INTERFACE
+    title: "NetworkProvider interface"
+    status: wip
+    spec: "providers/network/interface.md"
+    owner: bart
+    tests: []
+
+  # Phase 2: Core Orchestration
+  - id: CORE_PLAN
+    title: "Deployment planning"
+    status: done
+    spec: "core/plan.md"
+    owner: bart
+    tests:
+      - "internal/core/plan_test.go"
+
+  - id: CORE_STATE
+    title: "State management"
+    status: done
+    spec: "core/state.md"
+    owner: bart
+    tests:
+      - "internal/core/state/state_test.go"
+
+  - id: CLI_DEPLOY
+    title: "Deploy command"
+    status: todo
+    spec: "commands/deploy.md"
+    owner: bart
+    depends_on:
+      - CORE_PLAN
+      - CORE_STATE
+    tests: []
+
+  # Phase 3: Local Development
+  - id: CLI_DEV
+    title: "Dev command"
+    status: wip
+    spec: "commands/dev.md"
+    owner: bart
+    depends_on:
+      - CORE_CONFIG
+    tests: []
+
+  - id: DEV_HOSTS
+    title: "Hosts management"
+    status: todo
+    spec: "commands/dev.md"
+    owner: bart
+    depends_on:
+      - CLI_DEV
+    tests: []
+
+  # Governance
+  - id: GOV_CORE
+    title: "Governance core"
+    status: done
+    spec: "governance/GOV_CORE.md"
+    owner: bart
+    tests:
+      - "internal/governance/mapping/mapping_test.go"
+
+  - id: GOV_STATUS_ROADMAP
+    title: "Status roadmap command"
+    status: todo
+    spec: "commands/status-roadmap.md"
+    owner: bart
+    depends_on:
+      - GOV_CORE
+    tests: []

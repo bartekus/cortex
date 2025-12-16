@@ -1,0 +1,27 @@
+{
+  "features": [
+    {
+      "id": "CLI_DEPLOY",
+      "spec_path": "spec/commands/deploy.md",
+      "impl_files": [
+        "internal/cli/commands/deploy.go"
+      ],
+      "test_files": [
+        "internal/cli/commands/deploy_test.go"
+      ],
+      "status": "ok"
+    },
+    {
+      "id": "CLI_DEV",
+      "spec_path": "spec/commands/dev.md",
+      "impl_files": [
+        "internal/cli/commands/dev.go"
+      ],
+      "test_files": [
+        "internal/cli/commands/dev_test.go"
+      ],
+      "status": "ok"
+    }
+  ],
+  "violations": []
+}

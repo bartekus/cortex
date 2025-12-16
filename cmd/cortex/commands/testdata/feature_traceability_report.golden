@@ -1,0 +1,49 @@
+{
+  "schema_version": "1.0",
+  "summary": {
+    "total_features": 1,
+    "done": 0,
+    "wip": 0,
+    "todo": 0,
+    "deprecated": 0,
+    "removed": 0,
+    "features_with_gaps": 1
+  },
+  "features": {
+    "CLI_DEPLOY": {
+      "status": "",
+      "spec": {
+        "present": true,
+        "path": "spec/commands/deploy.md"
+      },
+      "implementation": {
+        "present": true,
+        "files": [
+          "internal/core/deploy.go"
+        ]
+      },
+      "tests": {
+        "present": false,
+        "files": null
+      },
+      "commits": {
+        "present": false,
+        "shas": null
+      },
+      "problems": [
+        {
+          "code": "MISSING_TESTS",
+          "severity": "warning",
+          "message": "Feature has a spec but no tests.",
+          "details": {}
+        },
+        {
+          "code": "MISSING_COMMITS",
+          "severity": "info",
+          "message": "Feature has no commits referencing this Feature ID yet.",
+          "details": {}
+        }
+      ]
+    }
+  }
+}
