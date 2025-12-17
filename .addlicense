@@ -1,0 +1,9 @@
+copyright=Bartek Kus
+license=agpl
+year=2025
+skip=vendor
+skip=node_modules
+skip=assets
+skip=.bin
+skip=.idea
+skip=.idea/workspace.xml
