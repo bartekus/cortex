@@ -94,32 +94,32 @@ mod tests {
     #[test]
     fn remote_matches_owner_repo_https() {
         assert!(remote_matches(
-            "bartekus/stagecraft",
-            "https://github.com/bartekus/stagecraft.git"
+            "bartekus/cortex",
+            "https://github.com/bartekus/cortex.git"
         ));
     }
 
     #[test]
     fn remote_matches_owner_repo_ssh() {
         assert!(remote_matches(
-            "bartekus/stagecraft",
-            "git@github.com:bartekus/stagecraft.git"
+            "bartekus/cortex",
+            "git@github.com:bartekus/cortex.git"
         ));
     }
 
     #[test]
     fn remote_matches_repo_only() {
         assert!(remote_matches(
-            "stagecraft",
-            "https://github.com/bartekus/stagecraft.git"
+            "cortex",
+            "https://github.com/bartekus/cortex.git"
         ));
     }
 
     #[test]
     fn remote_mismatch() {
         assert!(!remote_matches(
-            "bartekus/stagecraft",
-            "https://github.com/other/stagecraft.git"
+            "bartekus/cortex",
+            "https://github.com/other/cortex.git"
         ));
     }
 }

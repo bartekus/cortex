@@ -10,7 +10,7 @@ group: ai
 
 ## 1. Overview
 
-**Cortex** is the canonical, systems-level orchestration CLI for Stagecraft's AI context engine. It is the **only** supported entry point for generating AI context, running governance checks, and managing repository insights.
+**Cortex** is the canonical, systems-level orchestration CLI for Cortex's AI context engine. It is the **only** supported entry point for generating AI context, running governance checks, and managing repository insights.
 
 ### Strategic Role
 - **Orchestrator**: Cortex manages the workflow. It does not reinvent the wheel; it delegates compute-heavy scanning to **XRAY**.

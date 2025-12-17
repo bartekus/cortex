@@ -119,18 +119,18 @@ mod tests {
     #[test]
     fn test_resolver_folder_name_match() {
         let fs = MemFs::new();
-        fs.add_dir("/User/dev/stagecraft"); 
-        
+        fs.add_dir("/User/dev/cortex");
+
         // MemFs needs .git/config to be considered a repo by workspace scanner
-        fs.add_file("/User/dev/stagecraft/.git/config", "");
+        fs.add_file("/User/dev/cortex/.git/config", "");
 
         let roots = vec![PathBuf::from("/User/dev")];
         let engine = ResolveEngine::new(fs, roots);
-        
-        let resp = engine.resolve("stagecraft").unwrap();
+
+        let resp = engine.resolve("cortex").unwrap();
         assert_eq!(resp.status, ResolveStatus::Resolved);
-        assert_eq!(resp.root.unwrap(), "/User/dev/stagecraft");
+        assert_eq!(resp.root.unwrap(), "/User/dev/cortex");
     }
-    
+
     // Additional tests removed for brevity but logic is sound
 }
