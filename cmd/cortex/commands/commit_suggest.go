@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -31,7 +31,7 @@ import (
 // Feature: CLI_COMMIT_SUGGEST
 // Spec: spec/commands/commit-suggest.md
 
-// NewCommitSuggestCommand returns the `stagecraft commit suggest` command.
+// NewCommitSuggestCommand returns the `cortex commit suggest` command.
 func NewCommitSuggestCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "commit suggest",
@@ -57,7 +57,7 @@ func runCommitSuggest(cmd *cobra.Command, args []string) error {
 	}
 
 	// 2. Read commit health report
-	commitReportPath := filepath.Join(repoPath, ".stagecraft", "reports", "commit-health.json")
+	commitReportPath := filepath.Join(repoPath, ".cortex", "reports", "commit-health.json")
 	commitReportData, err := os.ReadFile(commitReportPath) //nolint:gosec // G304: path is validated from user input
 	if err != nil {
 		return fmt.Errorf("reading commit health report: %w", err)
@@ -69,7 +69,7 @@ func runCommitSuggest(cmd *cobra.Command, args []string) error {
 	}
 
 	// 3. Read feature traceability report
-	featureReportPath := filepath.Join(repoPath, ".stagecraft", "reports", "feature-traceability.json")
+	featureReportPath := filepath.Join(repoPath, ".cortex", "reports", "feature-traceability.json")
 	featureReportData, err := os.ReadFile(featureReportPath) //nolint:gosec // G304: path is validated from user input
 	if err != nil {
 		return fmt.Errorf("reading feature traceability report: %w", err)

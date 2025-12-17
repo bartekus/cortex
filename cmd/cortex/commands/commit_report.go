@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -22,9 +22,9 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bartekus/cortex/internal/featureindex"
+	"github.com/bartekus/cortex/internal/git"
 	"github.com/bartekus/cortex/internal/projectmeta"
 	"github.com/bartekus/cortex/internal/projectroot"
-	"github.com/bartekus/cortex/internal/git"
 	"github.com/bartekus/cortex/internal/reports"
 	"github.com/bartekus/cortex/internal/reports/commithealth"
 )
@@ -34,7 +34,7 @@ import (
 
 var newHistorySource = git.NewHistorySource
 
-// NewCommitReportCommand returns the `stagecraft commit report` command.
+// NewCommitReportCommand returns the `cortex commit report` command.
 func NewCommitReportCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "commit report",
@@ -95,7 +95,7 @@ func runCommitReport(cmd *cobra.Command, args []string) error {
 	}
 
 	// 8. Write report atomically
-	reportPath := filepath.Join(repoPath, ".stagecraft", "reports", "commit-health.json")
+	reportPath := filepath.Join(repoPath, ".cortex", "reports", "commit-health.json")
 	if err := reports.WriteJSONAtomic(reportPath, report); err != nil {
 		return fmt.Errorf("writing report: %w", err)
 	}

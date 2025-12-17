@@ -3,7 +3,7 @@ name = "xray"
 version = "0.1.0"
 edition = "2021"
 license = "AGPL-3.0-or-later"
-description = "Deterministic repository scanner for Stagecraft AI context"
+description = "Deterministic repository scanner for Cortex AI context"
 
 [dependencies]
 clap = { version = "4.4", features = ["derive"] }

@@ -1,0 +1,9 @@
+{
+  "status": "fail",
+  "skills": [
+    "lint:gofumpt"
+  ],
+  "failed": [
+    "lint:gofumpt"
+  ]
+}

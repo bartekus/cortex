@@ -29,7 +29,7 @@ func NewRootCommand() *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:           "cortex",
-		Short:         "Cortex - Developer & Governance Tooling for Stagecraft",
+		Short:         "Cortex - Developer & Governance Tooling for Cortex",
 		Long:          "Cortex provides repository scanning, governance checks, and AI context generation tools.",
 		SilenceUsage:  true,
 		SilenceErrors: true,
@@ -57,6 +57,7 @@ func NewRootCommand() *cobra.Command {
 	cmd.AddCommand(commands.NewGovCommand())
 	cmd.AddCommand(commands.NewStatusCommand())
 	cmd.AddCommand(commands.NewFeaturesCommand())
+	cmd.AddCommand(commands.GetRunCmd())
 
 	return cmd
 }

@@ -1,6 +1,6 @@
 # Cortex Library
 
-Core primitives for Stagecraft's developer and governance tooling.
+Core primitives for Cortex's developer and governance tooling.
 
 ## API Surface
 
@@ -23,5 +23,5 @@ Determines repository metadata.
 *   `DetermineRepoName(rootPath string) string`
 
 ## Rules
-*   **Pure Go**: No dependencies on `stagecraft/internal/...`.
+*   **Pure Go**: No dependencies on `cortex/internal/...`.
 *   **Reusable**: Can be used by other tools/projects.

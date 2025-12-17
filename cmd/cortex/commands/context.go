@@ -2,7 +2,7 @@
 
 /*
 
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -29,7 +29,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// NewContextCommand returns the `stagecraft context` command group.
+// NewContextCommand returns the `cortex context` command group.
 func NewContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "context",
@@ -47,7 +47,7 @@ func NewContextCommand() *cobra.Command {
 	return cmd
 }
 
-// NewContextBuildCommand returns the `stagecraft context build` command.
+// NewContextBuildCommand returns the `cortex context build` command.
 func NewContextBuildCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "build",
@@ -57,7 +57,7 @@ func NewContextBuildCommand() *cobra.Command {
 	}
 }
 
-// NewContextXrayCommand returns the `stagecraft context xray` command.
+// NewContextXrayCommand returns the `cortex context xray` command.
 func NewContextXrayCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "xray [subcommand] [flags]",
@@ -122,7 +122,7 @@ func NewContextXrayCommand() *cobra.Command {
 	return cmd
 }
 
-// NewContextDocsCommand returns the `stagecraft context docs` command.
+// NewContextDocsCommand returns the `cortex context docs` command.
 func NewContextDocsCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "docs",
@@ -140,7 +140,7 @@ func runContextBuild(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("finding repo root: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[stagecraft] building AI context...\n")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] building AI context...\n")
 
 	// 1. Run XRAY scan (Rust)
 	slug := filepath.Base(repoRoot)
@@ -170,7 +170,7 @@ func runContextBuild(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("building .ai-context: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[stagecraft] AI context ready → .ai-context/\n")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] AI context ready → .ai-context/\n")
 
 	return nil
 }
@@ -240,7 +240,7 @@ func runXraySubcommand(cmd *cobra.Command, sub string, args []string) error {
 	xrayArgs := []string{sub}
 	xrayArgs = append(xrayArgs, args...)
 
-	fmt.Fprintf(cmd.OutOrStdout(), "[cortex] Invoking XRAY: %s %v\n", bin, xrayArgs)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] Invoking XRAY: %s %v\n", bin, xrayArgs)
 
 	execCmd := exec.CommandContext(ctx, bin, xrayArgs...)
 	execCmd.Dir = repoRoot
@@ -262,8 +262,8 @@ func runContextDocs(cmd *cobra.Command, _ []string) error {
 	}
 
 	// Deprecation Notice (Option A)
-	return fmt.Errorf("context docs generation via Node is deprecated. Docs projection will be reimplemented in Go in Phase 4.")
+	return fmt.Errorf("context docs generation via Node is deprecated. Docs projection will be reimplemented in Go in Phase 4")
 
-	// _, _ = fmt.Fprintf(cmd.OutOrStdout(), "[stagecraft] generating AI-Agent docs...\n")
+	// _, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] generating AI-Agent docs...\n")
 	// ... removed ...
 }

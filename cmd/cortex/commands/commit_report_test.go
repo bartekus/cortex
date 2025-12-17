@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -31,8 +31,8 @@ func TestRunCommitReport_GeneratesReport(t *testing.T) {
 	// Create temporary repository structure
 	tmpDir := t.TempDir()
 
-	// Create .stagecraft/reports directory
-	reportsDir := filepath.Join(tmpDir, ".stagecraft", "reports")
+	// Create .cortex/reports directory
+	reportsDir := filepath.Join(tmpDir, ".cortex", "reports")
 	if err := os.MkdirAll(reportsDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("failed to create reports directory: %v", err)
 	}
@@ -78,7 +78,7 @@ func TestRunCommitReport_GeneratesReport(t *testing.T) {
 	}
 
 	repoInfo := commithealth.RepoInfo{
-		Name:          "stagecraft",
+		Name:          "cortex",
 		DefaultBranch: "main",
 	}
 
@@ -126,7 +126,7 @@ func TestRunCommitReport_ReportStructure(t *testing.T) {
 	}
 
 	repoInfo := commithealth.RepoInfo{
-		Name:          "stagecraft",
+		Name:          "cortex",
 		DefaultBranch: "main",
 	}
 
@@ -146,8 +146,8 @@ func TestRunCommitReport_ReportStructure(t *testing.T) {
 		t.Errorf("expected schema_version=1.0, got %s", report.SchemaVersion)
 	}
 
-	if report.Repo.Name != "stagecraft" {
-		t.Errorf("expected repo.name=stagecraft, got %s", report.Repo.Name)
+	if report.Repo.Name != "cortex" {
+		t.Errorf("expected repo.name=cortex, got %s", report.Repo.Name)
 	}
 
 	// Verify report can be marshaled to JSON
@@ -220,13 +220,13 @@ func TestRunCommitReport_CLIEndToEnd(t *testing.T) {
 
 	// Create temporary repository structure
 	tmpDir := t.TempDir()
-	repoDir := filepath.Join(tmpDir, "stagecraft")
+	repoDir := filepath.Join(tmpDir, "cortex")
 	if err := os.Mkdir(repoDir, 0o750); err != nil {
 		t.Fatalf("creating repo dir: %v", err)
 	}
 
-	// Create .stagecraft/reports directory (expected output location)
-	reportsDir := filepath.Join(repoDir, ".stagecraft", "reports")
+	// Create .cortex/reports directory (expected output location)
+	reportsDir := filepath.Join(repoDir, ".cortex", "reports")
 	if err := os.MkdirAll(reportsDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("failed to create reports directory: %v", err)
 	}
@@ -282,7 +282,7 @@ func TestRunCommitReport_CLIEndToEnd(t *testing.T) {
 	}
 
 	// Verify the report file was created
-	reportPath := filepath.Join(repoDir, ".stagecraft", "reports", "commit-health.json")
+	reportPath := filepath.Join(repoDir, ".cortex", "reports", "commit-health.json")
 	data, err := os.ReadFile(reportPath) //nolint:gosec // G304: test file path
 	if err != nil {
 		t.Fatalf("failed to read report file: %v", err)
@@ -299,8 +299,8 @@ func TestRunCommitReport_CLIEndToEnd(t *testing.T) {
 		t.Errorf("expected schema_version=1.0, got %s", report.SchemaVersion)
 	}
 
-	if report.Repo.Name != "stagecraft" {
-		t.Errorf("expected repo.name=stagecraft, got %s", report.Repo.Name)
+	if report.Repo.Name != "cortex" {
+		t.Errorf("expected repo.name=cortex, got %s", report.Repo.Name)
 	}
 }
 
@@ -331,7 +331,7 @@ func TestRunCommitReport_GoldenFile(t *testing.T) {
 	}
 
 	repoInfo := commithealth.RepoInfo{
-		Name:          "stagecraft",
+		Name:          "cortex",
 		DefaultBranch: "main",
 	}
 

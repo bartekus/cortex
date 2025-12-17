@@ -9,9 +9,9 @@ Available Commands:
   completion  Generate the autocompletion script for the specified shell
   context     AI context pipeline commands
   feature     Generate feature traceability report
-  gov         Governance checks for Stagecraft
+  gov         Governance checks for Cortex
   help        Help about any command
-  status      Show Stagecraft project status and roadmap analysis
+  status      Show Cortex project status and roadmap analysis
   version     Print the version number of Cortex
   xray        Run XRAY scan
 

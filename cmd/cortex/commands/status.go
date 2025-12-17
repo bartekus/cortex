@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -32,12 +32,12 @@ const (
 	defaultOutputPath   = "docs/engine/status/feature-completion-analysis.md"
 )
 
-// NewStatusCommand returns the `stagecraft status` command with subcommands
-// such as `stagecraft status roadmap`.
+// NewStatusCommand returns the `cortex status` command with subcommands
+// such as `cortex status roadmap`.
 func NewStatusCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "status",
-		Short: "Show Stagecraft project status and roadmap analysis",
+		Short: "Show Cortex project status and roadmap analysis",
 	}
 
 	cmd.AddCommand(newStatusRoadmapCommand())

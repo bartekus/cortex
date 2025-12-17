@@ -32,6 +32,13 @@ go.work.sum
 .idea/
 .vscode/
 
+rust/target/
+rust/mcp/target/
+rust/mcp/tests/outputs/
 rust/xray/target/
 rust/xray/tests/outputs/
 
+# Temporary directories and local artifact
+.cortex
+bin/
+bin/cortex

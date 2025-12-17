@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -27,11 +27,11 @@ import (
 var updateCommitSuggestGoldens = flag.Bool("update-commit-suggest-goldens", false, "update commit suggest golden files")
 
 // TestCommitSuggest_JSONGolden verifies that the JSON output of
-// `stagecraft commit suggest --format=json` is deterministic and matches the
+// `cortex commit suggest --format=json` is deterministic and matches the
 // golden file.
 //
 // This is an end-to-end CLI test that exercises:
-//   - Reading existing report files from .stagecraft/reports
+//   - Reading existing report files from .cortex/reports
 //   - Generating suggestions via the suggestions package
 //   - Applying prioritization and filtering
 //   - Rendering the JSON report
@@ -64,7 +64,7 @@ func TestCommitSuggest_JSONGolden(t *testing.T) {
 }
 
 // TestCommitSuggest_TextGolden verifies that the text output of
-// `stagecraft commit suggest --format=text` is deterministic and matches the
+// `cortex commit suggest --format=text` is deterministic and matches the
 // golden file.
 //
 // This is an end-to-end CLI test that exercises the text formatter.
@@ -113,13 +113,13 @@ func runCommitSuggestCLI(t *testing.T, format string) string {
 
 	// Create an isolated temporary repo directory.
 	tmpDir := t.TempDir()
-	repoDir := filepath.Join(tmpDir, "stagecraft")
+	repoDir := filepath.Join(tmpDir, "cortex")
 	if err := os.Mkdir(repoDir, 0o750); err != nil {
 		t.Fatalf("creating repo dir: %v", err)
 	}
 
-	// Prepare .stagecraft/reports with minimal, valid JSON fixtures.
-	reportsDir := filepath.Join(repoDir, ".stagecraft", "reports")
+	// Prepare .cortex/reports with minimal, valid JSON fixtures.
+	reportsDir := filepath.Join(repoDir, ".cortex", "reports")
 	if err := os.MkdirAll(reportsDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("creating reports dir: %v", err)
 	}
@@ -131,7 +131,7 @@ func runCommitSuggestCLI(t *testing.T, format string) string {
 	const commitHealthFixture = `{
   "schema_version": "1.0",
   "repo": {
-    "name": "stagecraft",
+    "name": "cortex",
     "default_branch": "main"
   },
   "range": {
@@ -180,7 +180,7 @@ func runCommitSuggestCLI(t *testing.T, format string) string {
 	}
 
 	// Change working directory to the temp repo so the command discovers
-	// .stagecraft/reports relative to CWD.
+	// .cortex/reports relative to CWD.
 	origWD, err := os.Getwd()
 	if err != nil {
 		t.Fatalf("getting working directory: %v", err)

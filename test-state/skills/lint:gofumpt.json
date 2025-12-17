@@ -1,0 +1,6 @@
+{
+  "skill": "lint:gofumpt",
+  "status": "fail",
+  "exit_code": 3,
+  "note": "Unformatted files:\ncmd/cortex/commands/commit_report.go\ninternal/features/testdata/feature-map-fixture/internal/cli/commands/deploy.go\ninternal/features/testdata/feature-map-fixture/internal/cli/commands/deploy_test.go\ninternal/specvscli/diff.go\ninternal/specvscli/diff_test.go\n\nTo fix, run:\n  gofumpt -w cmd/cortex/commands/commit_report.go internal/features/testdata/feature-map-fixture/internal/cli/commands/deploy.go internal/features/testdata/feature-map-fixture/internal/cli/commands/deploy_test.go internal/specvscli/diff.go internal/specvscli/diff_test.go"
+}

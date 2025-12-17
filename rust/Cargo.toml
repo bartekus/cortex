@@ -1,0 +1,3 @@
+[workspace]
+members = ["xray", "mcp"]
+resolver = "2"
