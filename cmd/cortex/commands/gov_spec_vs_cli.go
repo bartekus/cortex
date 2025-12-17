@@ -38,7 +38,7 @@ func NewGovSpecVsCLICommand() *cobra.Command {
 			if err != nil {
 				return fmt.Errorf("failed to open binary json file: %w", err)
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 
 			var cliCommands []introspect.CommandInfo
 			if err := json.NewDecoder(f).Decode(&cliCommands); err != nil {
@@ -70,9 +70,6 @@ func NewGovSpecVsCLICommand() *cobra.Command {
 			}
 
 			if hasErrors {
-				if strict {
-					// Strict mode logic if needed, but for now we just error if errors exist
-				}
 				return fmt.Errorf("CLI alignment check failed")
 			}
 

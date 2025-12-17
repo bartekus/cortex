@@ -6,5 +6,5 @@ This is a golden test fixture spec file for the dev command.
 
 ## Feature: CLI_DEV
 
-The `stagecraft dev` command starts local development services.
+The `cortex dev` command starts local development services.
 

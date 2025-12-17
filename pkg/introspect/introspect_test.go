@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -25,7 +25,7 @@ import (
 
 func TestIntrospect_RootCommand(t *testing.T) {
 	root := &cobra.Command{
-		Use:   "stagecraft",
+		Use:   "cortex",
 		Short: "Test CLI",
 	}
 
@@ -38,8 +38,8 @@ func TestIntrospect_RootCommand(t *testing.T) {
 	}
 
 	rootCmd := commands[0]
-	if rootCmd.Use != "stagecraft" {
-		t.Errorf("expected Use 'stagecraft', got %q", rootCmd.Use)
+	if rootCmd.Use != "cortex" {
+		t.Errorf("expected Use 'cortex', got %q", rootCmd.Use)
 	}
 
 	// Check persistent flags are included
@@ -50,7 +50,7 @@ func TestIntrospect_RootCommand(t *testing.T) {
 
 func TestIntrospect_WithSubcommands(t *testing.T) {
 	root := &cobra.Command{
-		Use:   "stagecraft",
+		Use:   "cortex",
 		Short: "Test CLI",
 	}
 
@@ -125,7 +125,7 @@ func TestFlagToInfo_BoolFlag(t *testing.T) {
 func TestFindCommand(t *testing.T) {
 	commands := []CommandInfo{
 		{
-			Use:   "stagecraft",
+			Use:   "cortex",
 			Short: "Root",
 			Subcommands: []CommandInfo{
 				{Use: "build", Short: "Build"},
@@ -135,7 +135,7 @@ func TestFindCommand(t *testing.T) {
 	}
 
 	// Find root
-	cmd := FindCommand(commands, "stagecraft")
+	cmd := FindCommand(commands, "cortex")
 	if cmd == nil {
 		t.Fatal("expected to find root command")
 	}
@@ -154,7 +154,7 @@ func TestFindCommand(t *testing.T) {
 func TestGetCommandFlags(t *testing.T) {
 	commands := []CommandInfo{
 		{
-			Use:   "stagecraft",
+			Use:   "cortex",
 			Flags: []FlagInfo{{Name: "config", Type: "string"}},
 			Subcommands: []CommandInfo{
 				{
@@ -165,7 +165,7 @@ func TestGetCommandFlags(t *testing.T) {
 		},
 	}
 
-	flags := GetCommandFlags(commands, "stagecraft build")
+	flags := GetCommandFlags(commands, "cortex build")
 	if len(flags) == 0 {
 		t.Fatal("expected to find flags")
 	}

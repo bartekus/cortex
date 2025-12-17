@@ -1,9 +1,9 @@
 # Feature Completion Analysis
 
-> **Source**: Generated from `spec/features.yaml` by `stagecraft status roadmap`
+> **Source**: Generated from `spec/features.yaml` by `cortex status roadmap`
 > **Last Updated**: See `spec/features.yaml` for the source of truth
 >
-> **Note**: This document is automatically generated. To regenerate, run `stagecraft status roadmap`.
+> **Note**: This document is automatically generated. To regenerate, run `cortex status roadmap`.
 
 ⸻
 
@@ -93,6 +93,6 @@ The following features are blocked by incomplete dependencies:
 
 ## Next Steps
 
-1. Use `stagecraft status roadmap` to regenerate this document whenever `spec/features.yaml` changes.
+1. Use `cortex status roadmap` to regenerate this document whenever `spec/features.yaml` changes.
 2. Prioritize unblocking critical-path features.
 3. Complete partially implemented phases before starting new ones.

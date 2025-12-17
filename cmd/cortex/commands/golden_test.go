@@ -3,15 +3,12 @@
 package commands
 
 import (
-	"bytes"
 	"flag"
 	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"testing"
-
-	"github.com/spf13/cobra"
 )
 
 // updateGolden is a flag to update golden files during development.
@@ -58,12 +55,12 @@ func writeGoldenFile(t *testing.T, name, content string) {
 }
 
 // executeCommandForGolden executes a command and returns its output for golden file comparison.
-func executeCommandForGolden(cmd *cobra.Command, args ...string) (string, error) {
-	buf := &bytes.Buffer{}
-	cmd.SetOut(buf)
-	cmd.SetErr(buf)
-	cmd.SetArgs(args)
+// func executeCommandForGolden(cmd *cobra.Command, args ...string) (string, error) {
+// 	buf := &bytes.Buffer{}
+// 	cmd.SetOut(buf)
+// 	cmd.SetErr(buf)
+// 	cmd.SetArgs(args)
 
-	err := cmd.Execute()
-	return buf.String(), err
-}
+// 	err := cmd.Execute()
+// 	return buf.String(), err
+// }

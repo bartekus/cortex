@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -30,13 +30,13 @@ func TestRunFeatureTraceability_GeneratesReport(t *testing.T) {
 
 	// Create temporary repository structure
 	tmpDir := t.TempDir()
-	repoDir := filepath.Join(tmpDir, "stagecraft")
+	repoDir := filepath.Join(tmpDir, "cortex")
 	if err := os.Mkdir(repoDir, 0o750); err != nil {
 		t.Fatalf("creating repo dir: %v", err)
 	}
 
-	// Create .stagecraft/reports directory
-	reportsDir := filepath.Join(repoDir, ".stagecraft", "reports")
+	// Create .cortex/reports directory
+	reportsDir := filepath.Join(repoDir, ".cortex", "reports")
 	if err := os.MkdirAll(reportsDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("failed to create reports directory: %v", err)
 	}
@@ -96,7 +96,7 @@ package core
 	}
 
 	// Verify the report file was created
-	reportPath := filepath.Join(repoDir, ".stagecraft", "reports", "feature-traceability.json")
+	reportPath := filepath.Join(repoDir, ".cortex", "reports", "feature-traceability.json")
 	data, err := os.ReadFile(reportPath) //nolint:gosec // G304: test file path
 	if err != nil {
 		t.Fatalf("failed to read report file: %v", err)
@@ -160,13 +160,13 @@ func TestRunFeatureTraceability_GoldenFile(t *testing.T) {
 
 	// Create temporary repository structure
 	tmpDir := t.TempDir()
-	repoDir := filepath.Join(tmpDir, "stagecraft")
+	repoDir := filepath.Join(tmpDir, "cortex")
 	if err := os.Mkdir(repoDir, 0o750); err != nil {
 		t.Fatalf("creating repo dir: %v", err)
 	}
 
-	// Create .stagecraft/reports directory
-	reportsDir := filepath.Join(repoDir, ".stagecraft", "reports")
+	// Create .cortex/reports directory
+	reportsDir := filepath.Join(repoDir, ".cortex", "reports")
 	if err := os.MkdirAll(reportsDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("failed to create reports directory: %v", err)
 	}
@@ -226,7 +226,7 @@ package core
 	}
 
 	// Read the generated report file
-	reportPath := filepath.Join(repoDir, ".stagecraft", "reports", "feature-traceability.json")
+	reportPath := filepath.Join(repoDir, ".cortex", "reports", "feature-traceability.json")
 	data, err := os.ReadFile(reportPath) //nolint:gosec // G304: test file path
 	if err != nil {
 		t.Fatalf("failed to read report file: %v", err)

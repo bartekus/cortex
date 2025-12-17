@@ -9,7 +9,7 @@ pub struct XrayIndex {
     /// Schema version (e.g. "1.0.0")
     pub schema_version: String,
 
-    /// Repository root name (e.g. "stagecraft")
+    /// Repository root name (e.g. "cortex")
     pub root: String,
 
     /// Scan target relative to root (e.g. ".")

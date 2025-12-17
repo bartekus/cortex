@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -27,7 +27,7 @@ import (
 // Feature: PROVIDER_FRONTEND_GENERIC
 // Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
 
-// NewFeatureTraceabilityCommand returns the `stagecraft feature traceability` command.
+// NewFeatureTraceabilityCommand returns the `cortex feature traceability` command.
 func NewFeatureTraceabilityCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "feature traceability",
@@ -66,7 +66,7 @@ func runFeatureTraceability(cmd *cobra.Command, args []string) error {
 	}
 
 	// 4. Write report atomically
-	reportPath := filepath.Join(repoPath, ".stagecraft", "reports", "feature-traceability.json")
+	reportPath := filepath.Join(repoPath, ".cortex", "reports", "feature-traceability.json")
 	if err := reports.WriteJSONAtomic(reportPath, report); err != nil {
 		return fmt.Errorf("writing report: %w", err)
 	}

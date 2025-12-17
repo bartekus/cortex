@@ -1,7 +1,7 @@
 {
   "schema_version": "1.0",
   "repo": {
-    "name": "stagecraft",
+    "name": "cortex",
     "default_branch": "main"
   },
   "range": {

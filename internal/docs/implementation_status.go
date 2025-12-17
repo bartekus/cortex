@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -54,7 +54,7 @@ func generateImplementationStatusMarkdown(graph *features.Graph) string {
 	sb.WriteString("# Implementation Status\n\n")
 	sb.WriteString("> **⚠️ Note**: This document is a snapshot view. For the complete, up-to-date feature list, see [`spec/features.yaml`](../../../spec/features.yaml).\n>\n")
 	sb.WriteString("> This document shows a subset of features for quick reference. The full feature catalog with 61+ features organized by phase is available in [`docs/narrative/implementation-roadmap.md`](../../narrative/implementation-roadmap.md).\n\n")
-	sb.WriteString("This document tracks the implementation status of Stagecraft features. It should be regenerated from `spec/features.yaml` when needed.\n\n")
+	sb.WriteString("This document tracks the implementation status of Cortex features. It should be regenerated from `spec/features.yaml` when needed.\n\n")
 	sb.WriteString("> **Last Updated**: See `spec/features.yaml` for the source of truth.\n\n")
 	sb.WriteString("## Feature Status Legend\n\n")
 	sb.WriteString("- **done** - Feature is complete with tests and documentation\n")

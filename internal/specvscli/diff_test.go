@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -17,8 +17,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/bartekus/cortex/pkg/introspect"
 	"github.com/bartekus/cortex/internal/specschema"
+	"github.com/bartekus/cortex/pkg/introspect"
 )
 
 // Feature: GOV_CORE
@@ -239,7 +239,7 @@ func TestCompareAllCommands_WithMatchingSpec(t *testing.T) {
 
 	cliCommands := []introspect.CommandInfo{
 		{
-			Use: "stagecraft",
+			Use: "cortex",
 			Subcommands: []introspect.CommandInfo{
 				{
 					Use: "build",
@@ -286,7 +286,7 @@ func TestCompareAllCommands_SkipsCommandsWithoutSpec(t *testing.T) {
 
 	cliCommands := []introspect.CommandInfo{
 		{
-			Use: "stagecraft",
+			Use: "cortex",
 			Subcommands: []introspect.CommandInfo{
 				{
 					Use: "build",
@@ -342,7 +342,7 @@ func TestCompareAllCommands_RecursiveSubcommands(t *testing.T) {
 
 	cliCommands := []introspect.CommandInfo{
 		{
-			Use: "stagecraft",
+			Use: "cortex",
 			Subcommands: []introspect.CommandInfo{
 				{
 					Use: "build",

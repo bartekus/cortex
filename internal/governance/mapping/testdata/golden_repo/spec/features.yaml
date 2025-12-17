@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+# Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 #
 # Copyright (C) 2025  Bartek Kus
 #
@@ -10,7 +10,7 @@
 #
 features:
   - id: CLI_DEV
-    title: "stagecraft dev command"
+    title: "cortex dev command"
     status: done
     spec: "commands/dev.md"
     owner: bart
@@ -18,7 +18,7 @@ features:
       - "internal/cli/commands/dev_test.go"
 
   - id: CLI_DEPLOY
-    title: "stagecraft deploy command"
+    title: "cortex deploy command"
     status: done
     spec: "commands/deploy.md"
     owner: bart

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package builder
 
 // We are testing internal functions, so we use package builder instead of builder_test

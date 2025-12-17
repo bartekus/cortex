@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -11,7 +11,7 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Package commands contains Cobra subcommands for the Stagecraft CLI.
+// Package commands contains Cobra subcommands for the Cortex CLI.
 package commands
 
 import (
@@ -27,12 +27,12 @@ import (
 // Feature: GOV_CORE
 // Spec: spec/governance/GOV_CORE.md
 
-// NewGovCommand returns the `stagecraft gov` command.
+// NewGovCommand returns the `cortex gov` command.
 func NewGovCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "gov",
-		Short: "Governance checks for Stagecraft",
-		Long:  "Governance commands for validating Stagecraft's spec, feature, and code alignment",
+		Short: "Governance checks for Cortex",
+		Long:  "Governance commands for validating Cortex's spec, feature, and code alignment",
 	}
 
 	cmd.AddCommand(newGovFeatureMappingCommand())

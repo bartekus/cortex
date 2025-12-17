@@ -35,3 +35,5 @@ go.work.sum
 rust/xray/target/
 rust/xray/tests/outputs/
 
+# Temporary directories and local artifact
+.cortex

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
 package commands
 
 import (
@@ -130,7 +131,9 @@ func TestIntegrationContextBuild(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() {
-		os.Chdir(cwd)
+		if err := os.Chdir(cwd); err != nil {
+			t.Fatalf("failed to restore cleanup cwd: %v", err)
+		}
 	})
 
 	// Silence output

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Stagecraft - Stagecraft is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -30,9 +30,9 @@ func GenerateMarkdown(stats *Stats, blockers []*Blocker) string {
 
 	// Top-level heading
 	b.WriteString("# Feature Completion Analysis\n\n")
-	b.WriteString("> **Source**: Generated from `spec/features.yaml` by `stagecraft status roadmap`\n")
+	b.WriteString("> **Source**: Generated from `spec/features.yaml` by `cortex status roadmap`\n")
 	b.WriteString("> **Last Updated**: See `spec/features.yaml` for the source of truth\n>\n")
-	b.WriteString("> **Note**: This document is automatically generated. To regenerate, run `stagecraft status roadmap`.\n\n")
+	b.WriteString("> **Note**: This document is automatically generated. To regenerate, run `cortex status roadmap`.\n\n")
 	b.WriteString("⸻\n\n")
 
 	// Executive Summary
@@ -156,7 +156,7 @@ func GenerateMarkdown(stats *Stats, blockers []*Blocker) string {
 
 	// Next Steps
 	b.WriteString("## Next Steps\n\n")
-	b.WriteString("1. Use `stagecraft status roadmap` to regenerate this document whenever `spec/features.yaml` changes.\n")
+	b.WriteString("1. Use `cortex status roadmap` to regenerate this document whenever `spec/features.yaml` changes.\n")
 	b.WriteString("2. Prioritize unblocking critical-path features.\n")
 	b.WriteString("3. Complete partially implemented phases before starting new ones.\n")
 
