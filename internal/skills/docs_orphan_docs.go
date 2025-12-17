@@ -64,9 +64,22 @@ func (s *DocsOrphanDocs) Run(ctx context.Context, deps *runner.Deps) runner.Skil
 	// Filter candidates (only docs/**/*.md, not ignored)
 	for _, p := range allFiles {
 		if strings.HasPrefix(p, "docs/") {
+			// Check for hidden directories (e.g. docs/.hidden/...)
+			parts := strings.Split(p, "/")
+			hidden := false
+			for _, part := range parts {
+				if strings.HasPrefix(part, ".") && part != "." && part != ".." {
+					hidden = true
+					break
+				}
+			}
+			if hidden {
+				continue
+			}
+
 			// Candidates must be in docs/
-			// Exclude docs/archive/
-			if strings.HasPrefix(p, "docs/archive/") {
+			// Exclude docs/archive/ and docs/__generated__/
+			if strings.HasPrefix(p, "docs/archive/") || strings.HasPrefix(p, "docs/__generated__/") {
 				continue
 			}
 			candidates[p] = true

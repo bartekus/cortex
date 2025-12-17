@@ -27,11 +27,15 @@ func (s *Purity) ID() string { return s.id }
 // Map of "banned package" -> list of allowed directories prefixes
 var bannedImports = map[string][]string{
 	"os/exec": {
-		"cmd/",              // Allowed in commands
-		"internal/skills/",  // Allowed in skills
-		"internal/scanner/", // Allowed in scanner (git ls-files)
-		"internal/runner/",  // Allowed if runner needs to exec (maybe?)
-		"internal/git/",     // Allowed for git operations
+		"cmd/",                // Allowed in commands
+		"internal/skills/",    // Allowed in skills
+		"internal/scanner/",   // Allowed in scanner (git ls-files)
+		"internal/runner/",    // Allowed if runner needs to exec (maybe?)
+		"internal/git/",       // Allowed for git operations
+		"pkg/executil/",       // Allowed: core exec utility
+		"test/e2e/",           // Allowed: e2e tests
+		"internal/dev/",       // Allowed: dev tooling
+		"internal/providers/", // Allowed: local providers
 		// "tools/", // If we had tools
 	},
 	// Add others if needed: "syscall", "unsafe"

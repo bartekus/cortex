@@ -37,3 +37,5 @@ rust/xray/tests/outputs/
 
 # Temporary directories and local artifact
 .cortex
+bin/
+bin/cortex

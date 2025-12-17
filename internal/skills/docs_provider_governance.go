@@ -67,21 +67,57 @@ func (s *DocsProviderGovernance) Run(ctx context.Context, deps *runner.Deps) run
 
 		// Check for corresponding doc
 		// Expected: docs/providers/<relPath>
-		expectedDoc := filepath.Join("docs", "providers", relPath)
+		// e.g. spec/providers/backend/encore-ts.md -> docs/providers/backend/encore-ts.md
 
-		// Verify existence
-		// We can use os.Stat (simple existence) or check if it's in allFiles (tracked existence).
-		// Governance usually implies tracked existence.
-		// Since we have allFiles, let's use that if possible, but searching a slice is O(N).
-		// Let's use os.Stat for simplicity, or build a map if N is large. Map is safer.
-		// Actually, let's assume if it exists on disk it's fine, but tracked is better.
-		// I'll assume tracked. Let's create a map of docs files.
+		// Fallbacks:
+		// 1. docs/providers/<relPath>
+		// 2. docs/providers/<category>.md (if <relPath> is <category>/<name>.md -> NO, wait)
+		//    User said: "docs/providers/<category>.md (category index)"
+		//    If spec is spec/providers/backend/encore-ts.md, category is backend.
+		// 3. docs/providers/<category>/<name>/README.md
+		// 4. docs/providers/<category>/<name>/index.md
 
-		// Wait, I can just os.Stat(filepath.Join(deps.RepoRoot, expectedDoc)).
-		// If it exists but untracked, another check (orphan-docs) might complain or not.
-		// Let's rely on os.Stat for existence.
-		if _, err := os.Stat(filepath.Join(deps.RepoRoot, expectedDoc)); os.IsNotExist(err) {
-			missingDocs = append(missingDocs, fmt.Sprintf("Provider spec %s missing doc %s", p, expectedDoc))
+		candidates := []string{}
+
+		// 1. Direct mirror
+		candidates = append(candidates, filepath.Join("docs", "providers", relPath))
+
+		// Logic to extract category and name
+		// relPath = backend/encore-ts.md
+		dir := filepath.Dir(relPath)               // backend
+		nameExt := filepath.Base(relPath)          // encore-ts.md
+		name := strings.TrimSuffix(nameExt, ".md") // encore-ts
+
+		// 2. Category Index? Only if it's a "provider" inside a "category".
+		// If spec is spec/providers/aws.md, dir=".", name="aws". Category index docs/providers.md? Maybe.
+		// User example: spec/providers/backend/encore-ts.md -> docs/providers/backend.md
+		if dir != "." {
+			categoryDoc := filepath.Join("docs", "providers", dir+".md")
+			candidates = append(candidates, categoryDoc)
+		}
+
+		// 3. Folder README
+		// docs/providers/backend/encore-ts/README.md
+		candidates = append(candidates, filepath.Join("docs", "providers", dir, name, "README.md"))
+
+		// 4. Folder Index
+		// docs/providers/backend/encore-ts/index.md
+		candidates = append(candidates, filepath.Join("docs", "providers", dir, name, "index.md"))
+
+		// 5. Root Name Match
+		// spec/providers/integration/terraform.md -> docs/providers/terraform.md
+		candidates = append(candidates, filepath.Join("docs", "providers", name+".md"))
+
+		found := false
+		for _, c := range candidates {
+			if _, err := os.Stat(filepath.Join(deps.RepoRoot, c)); err == nil {
+				found = true
+				break
+			}
+		}
+
+		if !found {
+			missingDocs = append(missingDocs, fmt.Sprintf("Provider spec %s missing doc. Tried: %v", p, candidates))
 		}
 	}
 

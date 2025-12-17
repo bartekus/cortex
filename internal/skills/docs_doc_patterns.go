@@ -45,17 +45,38 @@ func (s *DocsDocPatterns) Run(ctx context.Context, deps *runner.Deps) runner.Ski
 
 	var failures []string
 
+	// Updated Regex to allow Uppercase
+	fileNameRegex := regexp.MustCompile(`^[A-Za-z0-9\-_]+\.md$`)
+
 	for _, p := range files {
 		// Only check docs/
 		if !strings.HasPrefix(p, "docs/") {
 			continue
 		}
 
-		// 1. Lowercase naming
-		// Check filename part
+		// Check exclusions
+		// 1. Hidden directories (segment starts with .)
+		parts := strings.Split(p, string(filepath.Separator))
+		isHidden := false
+		for _, part := range parts {
+			if strings.HasPrefix(part, ".") && part != "." && part != ".." {
+				isHidden = true
+				break
+			}
+		}
+		if isHidden {
+			continue
+		}
+
+		// 2. Specific ignores
+		if strings.Contains(p, "/__generated__/") || strings.Contains(p, "/archive/") {
+			continue
+		}
+
+		// 1. Filename naming
 		base := filepath.Base(p)
 		if !fileNameRegex.MatchString(base) {
-			failures = append(failures, fmt.Sprintf("%s: invalid filename (must match [a-z0-9-_]+\\.md)", p))
+			failures = append(failures, fmt.Sprintf("%s: invalid filename (must match [A-Za-z0-9-_]+\\.md)", p))
 		}
 
 		// 2. No spaces in path

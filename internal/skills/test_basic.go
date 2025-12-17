@@ -84,7 +84,7 @@ func (s *SmartBinarySkill) Run(ctx context.Context, deps *runner.Deps) runner.Sk
 	// go build -o bin/foo ./cmd/foo works from module root.
 
 	// Check existence
-	cortexPath := "cmd/cortex"
+	// Check existence
 	cortexPath := "cmd/cortex"
 
 	// We need to check if directory exists relative to RepoRoot
@@ -95,22 +95,15 @@ func (s *SmartBinarySkill) Run(ctx context.Context, deps *runner.Deps) runner.Sk
 		hasCortex = true
 	}
 
-	hasCortex := false
-	if info, err := os.Stat(deps.RepoRoot + "/" + cortexPath); err == nil && info.IsDir() {
-		hasCortex = true
-	}
-
 	var args []string
 
 	if hasCortex {
-		args = []string{"go", "build", "-o", "bin/cortex", "./cmd/cortex"}
-	} else if hasCortex {
 		args = []string{"go", "build", "-o", "bin/cortex", "./cmd/cortex"}
 	} else {
 		return runner.SkillResult{
 			Skill:  s.id,
 			Status: runner.StatusSkip,
-			Note:   "No cmd/cortex or cmd/cortex found",
+			Note:   "No cmd/cortex found",
 		}
 	}
 
