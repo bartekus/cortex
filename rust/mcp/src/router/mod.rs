@@ -60,55 +60,68 @@ impl Router {
                         {
                             "name": "list_mounts",
                             "description": "List currently resolved/mounted servers",
-                            "inputSchema": { 
+                            "inputSchema": {
                                 "type": "object",
-                                "parsed": false, // Indicates strict empty object if client parses
-                                "additionalProperties": false 
+                                "properties": {},
+                                "additionalProperties": false
                             }
                         },
                         {
                             "name": "describe_skills",
                             "description": "List available skills",
-                            "inputSchema": { 
+                            "inputSchema": {
                                 "type": "object",
-                                "additionalProperties": false 
+                                "properties": {},
+                                "additionalProperties": false
                             }
                         },
                         {
                             "name": "get_capabilities",
                             "description": "Get server capabilities",
-                            "inputSchema": { 
-                                "type": "object", 
-                                "additionalProperties": false 
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {},
+                                "additionalProperties": false
                             }
                         }
                     ]
                 }))
             },
             "tools/call" => {
-                 let params = req.params.as_ref().ok_or("No params").and_then(|p| p.as_object().ok_or("Params not object"));
-                 if let Err(_) = params {
-                     return json_rpc_error(req.id.clone(), -32602, "Invalid params: must be an object");
-                 }
-                 let params = params.unwrap();
-                 
-                 let name = params.get("name").and_then(|n| n.as_str());
-                 if name.is_none() {
-                     return json_rpc_error(req.id.clone(), -32602, "Invalid params: missing 'name'");
-                 }
-                 let name = name.unwrap();
-                 
-                 let args = params.get("arguments").and_then(|a| a.as_object());
-    
-                 match name {
+                let params = req.params.as_ref().ok_or("No params").and_then(|p| p.as_object().ok_or("Params not object"));
+                if let Err(_) = params {
+                    return json_rpc_error(req.id.clone(), -32602, "Invalid params: must be an object");
+                }
+                let params = params.unwrap();
+
+                let name = params.get("name").and_then(|n| n.as_str());
+                if name.is_none() {
+                    return json_rpc_error(req.id.clone(), -32602, "Invalid params: missing 'name'");
+                }
+                let name = name.unwrap();
+
+                let args_value = params.get("arguments");
+                if let Some(v) = args_value {
+                    if !v.is_object() {
+                        return json_rpc_error(req.id.clone(), -32602, "Invalid params: 'arguments' must be an object");
+                    }
+                }
+                let args = args_value.and_then(|a| a.as_object());
+
+                let args_is_empty = match args {
+                    Some(m) => m.is_empty(),
+                    None => true,
+                };
+
+                match name {
                     "resolve_mcp" => {
                         // Strict validation: resolve_mcp requires 'name' inside arguments
                         let target = args.and_then(|a| a.get("name")).and_then(|n| n.as_str());
                         if target.is_none() {
-                             return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments.name is required");
+                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments.name is required");
                         }
                         let target = target.unwrap();
-    
+
                         match self.resolver.resolve(target) {
                             Ok(resp) => {
                                 // Side effect: Register mount if resolved
@@ -123,11 +136,11 @@ impl Router {
                                         });
                                     }
                                 }
-                                
+
                                 // Return structured JSON + Text (JSON FIRST)
                                 let json_val = serde_json::to_value(&resp).unwrap();
                                 let text_val = serde_json::to_string(&resp).unwrap();
-                                
+
                                 // Direct result object
                                 json_rpc_ok(req.id.clone(), json!({
                                     "content": [
@@ -140,12 +153,18 @@ impl Router {
                         }
                     },
                     "list_mounts" => {
+                        if !args_is_empty {
+                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                        }
                         let list = self.mounts.list();
                         json_rpc_ok(req.id.clone(), json!({
                             "content": [{ "type": "json", "json": list }]
                         }))
                     },
                     "describe_skills" => {
+                        if !args_is_empty {
+                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                        }
                         let skills = json!({
                             "repo.read": { "methods": ["resolve_mcp"], "notes": "Resolve repo names to local paths" },
                             "format:gofumpt": { "notes": "Planned" },
@@ -155,7 +174,10 @@ impl Router {
                             "content": [{ "type": "json", "json": skills }]
                         }))
                     },
-                     "get_capabilities" => {
+                    "get_capabilities" => {
+                        if !args_is_empty {
+                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                        }
                         // Return the same capabilities object we use for initialize
                         // plus any extended metadata
                         let caps = json!({
@@ -169,7 +191,7 @@ impl Router {
                         }))
                     },
                     _ => json_rpc_error(req.id.clone(), -32601, "Tool not found")
-                 }
+                }
             },
             "notifications/initialized" => {
                  JsonRpcResponse { jsonrpc: "2.0".into(), result: None, error: None, id: None }

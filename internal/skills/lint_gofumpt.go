@@ -18,14 +18,25 @@ func (s *LintGofumpt) ID() string {
 }
 
 func (s *LintGofumpt) Run(ctx context.Context, deps *runner.Deps) runner.SkillResult {
-	// 1. Get tracked Go files
-	files, err := deps.Scanner.TrackedGoFiles(ctx)
-	if err != nil {
-		return runner.SkillResult{
-			Skill:    s.ID(),
-			Status:   runner.StatusFail,
-			ExitCode: 4,
-			Note:     fmt.Sprintf("Failed to list files: %v", err),
+	// 1. Determine files to check
+	var files []string
+	var err error
+
+	if len(deps.TargetFiles) > 0 {
+		for _, f := range deps.TargetFiles {
+			if strings.HasSuffix(f, ".go") {
+				files = append(files, f)
+			}
+		}
+	} else {
+		files, err = deps.Scanner.TrackedGoFiles(ctx)
+		if err != nil {
+			return runner.SkillResult{
+				Skill:    s.ID(),
+				Status:   runner.StatusFail,
+				ExitCode: 4,
+				Note:     fmt.Sprintf("Failed to list files: %v", err),
+			}
 		}
 	}
 

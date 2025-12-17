@@ -12,6 +12,7 @@ type Deps struct {
 	StateDir      string
 	Scanner       *scanner.Scanner
 	FailOnWarning bool
+	TargetFiles   []string // Files to process (if empty, process all tracked files)
 	// Add other deps like Registry later
 }
 

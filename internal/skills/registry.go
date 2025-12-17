@@ -35,6 +35,7 @@ func newPlaceholder(id string) runner.Skill {
 
 // Re-defining All with real implementations where available
 var Registry = []runner.Skill{
+	&FormatGofumpt{},
 	&LintGofumpt{},
 	&LintGolangCI{},
 	NewTestBuild(),

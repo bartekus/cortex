@@ -1,6 +1,8 @@
 package commands
 
 import (
+	"bufio"
+	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -19,6 +21,7 @@ var (
 	runJSON          bool
 	runStateDir      string
 	runFailOnWarning bool
+	runFiles0        bool
 )
 
 var runCmd = &cobra.Command{
@@ -39,6 +42,7 @@ func init() {
 	runCmd.PersistentFlags().BoolVar(&runJSON, "json", false, "Output results in JSON")
 	runCmd.PersistentFlags().StringVar(&runStateDir, "state-dir", ".cortex/run", "Directory to store run state")
 	runCmd.PersistentFlags().BoolVar(&runFailOnWarning, "fail-on-warning", false, "Fail if warnings occur")
+	runCmd.PersistentFlags().BoolVar(&runFiles0, "files0", false, "Read NULL-delimited file list from stdin")
 
 	runCmd.AddCommand(runListCmd)
 	runCmd.AddCommand(runAllCmd)
@@ -100,11 +104,38 @@ func setupRunner(ctx context.Context) (*runner.Runner, error) {
 	}
 
 	scn := scanner.New(repoRoot)
+
+	var targetFiles []string
+	if runFiles0 {
+		// Read from stdin until EOF, split by \0
+		reader := bufio.NewReader(os.Stdin)
+		var buffer bytes.Buffer
+		for {
+			b, err := reader.ReadByte()
+			if err != nil {
+				// EOF or error
+				if buffer.Len() > 0 {
+					targetFiles = append(targetFiles, buffer.String())
+				}
+				break
+			}
+			if b == 0 {
+				if buffer.Len() > 0 {
+					targetFiles = append(targetFiles, buffer.String())
+					buffer.Reset()
+				}
+				continue
+			}
+			buffer.WriteByte(b)
+		}
+	}
+
 	deps := &runner.Deps{
 		RepoRoot:      repoRoot,
 		StateDir:      stateDir,
 		Scanner:       scn,
 		FailOnWarning: runFailOnWarning,
+		TargetFiles:   targetFiles,
 	}
 
 	return runner.NewRunner(skills.Registry, store, deps), nil
