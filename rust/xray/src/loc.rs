@@ -59,10 +59,14 @@ pub fn compute_loc(path: &Path) -> Result<LocStats> {
             // "a\n" has 1 line? or 2?
             // "a\nb" has 2 lines.
             
-            // To be strictly deterministic and simple: match `wc -l` semantics usually,
-            // OR match "text editor" lines.
-            // Let's use `lines().count()`.
-            // Rust `lines()` handles `\n` and `\r\n`.
+            // We use `lines().count()` which counts lines *terminated* or *separated* by \n.
+            // Edge cases:
+            // "a\n" -> 1 line
+            // "a" -> 1 line
+            // "" -> 0 lines
+            // "a\nb" -> 2 lines
+            // This is "Logical Lines", distinct from POSIX `wc -l` which counts newlines.
+            // This behavior is LOCKED for XRAY determinism.
             let loc = text.lines().count() as u64;
             
             // Re-verify edge case:

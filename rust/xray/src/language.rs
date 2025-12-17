@@ -34,11 +34,12 @@ pub fn detect_language(path: &Path) -> String {
             "cpp" | "hpp" | "cc" | "cxx" => "C++",
             "tf" => "Terraform",
             "txt" | "text" => "Text",
-            _ => "Unknown", // Or leave empty? Spec implies "languages" map. Unknowns usually ignored in stats? 
-                            // let's return "Unknown" so it's explicit for now, but usually we might exclude from stats.
-                            // The user said "others Unknown or skip (choose + lock)". I will lock to "Unknown".
+
+            _ => "Unknown", // LOCKED POLICY: Returns "Unknown".
+                            // Aggregation logic MUST exclude "Unknown" from the "languages" map.
+                            // This ensures the map only contains detected languages with high confidence.
         }.to_string()
     } else {
-        "Unknown".to_string()
+        "Unknown".to_string() // Policy: No extension = Unknown
     }
 }

@@ -12,7 +12,13 @@ use anyhow::Result;
 /// 3. Serialize to canonical JSON.
 /// 4. Hash it.
 pub fn calculate_digest(index: &XrayIndex) -> Result<String> {
-    let mut clone = XrayIndex {
+    // Enforce invariants before hashing. 
+    // The digest MUST certify the validity of the structure.
+    // We check invariants on the input index (except digest field which is ignored).
+    // Note: checking unique paths, sortedness, etc.
+    super::canonical::validate_invariants(index)?;
+
+    let clone = XrayIndex {
         schema_version: index.schema_version.clone(),
         root: index.root.clone(),
         target: index.target.clone(),
@@ -24,10 +30,8 @@ pub fn calculate_digest(index: &XrayIndex) -> Result<String> {
         digest: "".to_string(), // MUST be empty for calculation
     };
 
-    // Ensure strict sorting before hashing
-    clone.files.sort_by(|a, b| a.path.cmp(&b.path));
-    clone.module_files.sort();
-
+    // Sorting REMOVED. We rely on validate_invariants to ensure it's already sorted.
+    
     let bytes = to_canonical_json(&clone)?;
     let mut hasher = Sha256::new();
     hasher.update(&bytes);

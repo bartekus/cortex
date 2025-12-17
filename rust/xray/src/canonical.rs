@@ -16,6 +16,9 @@ use serde_json::{Map, Value};
 /// - Using `BTreeMap` helps, but does not guarantee recursive key ordering for *all* nested objects.
 /// - Therefore we canonicalize by converting to `serde_json::Value` and recursively sorting object keys.
 pub fn to_canonical_json(index: &XrayIndex) -> Result<Vec<u8>> {
+    // Enforce invariants before serialization
+    validate_invariants(index)?;
+
     let value = serde_json::to_value(index).context("Failed to convert index to JSON value")?;
     let canon = canonicalize_value(value);
     serde_json::to_vec(&canon).context("Failed to serialize canonical JSON")
@@ -30,36 +33,51 @@ fn canonicalize_value(v: Value) -> Value {
 }
 
 fn canonicalize_object(map: Map<String, Value>) -> Value {
+    // Collect into a Vec to handle sorting without re-lookup
+    let mut entries: Vec<(String, Value)> = map.into_iter().collect();
+    
     // Sort keys lexicographically.
-    let mut keys: Vec<String> = map.keys().cloned().collect();
-    keys.sort();
+    entries.sort_by(|a, b| a.0.cmp(&b.0));
 
     let mut out = Map::new();
-    for k in keys {
-        // Safe: key exists in original map.
-        let child = map.get(&k).expect("key must exist").clone();
-        out.insert(k, canonicalize_value(child));
+    for (k, v) in entries {
+        out.insert(k, canonicalize_value(v));
     }
 
     Value::Object(out)
 }
 
-/// Validates that the index is sorted correctly.
-/// Returns true if compliant, false if not.
-pub fn validate_sort_order(index: &XrayIndex) -> bool {
-    // Check files are strictly sorted by path
-    for window in index.files.windows(2) {
+/// Validates that the index is sorted correctly and adheres to invariants.
+pub fn validate_invariants(index: &XrayIndex) -> Result<()> {
+    // 1. Check files are strictly sorted by path
+    for (i, window) in index.files.windows(2).enumerate() {
         if window[0].path >= window[1].path {
-            return false;
+            if window[0].path == window[1].path {
+                anyhow::bail!("Duplicate file path at index {}: {}", i, window[0].path);
+            }
+            anyhow::bail!("Files not sorted at index {}: {} >= {}", i, window[0].path, window[1].path);
         }
     }
 
-    // Check module_files are strictly sorted
-    for window in index.module_files.windows(2) {
+    // 2. Check module_files are strictly sorted
+    for (i, window) in index.module_files.windows(2).enumerate() {
         if window[0] >= window[1] {
-            return false;
+            if window[0] == window[1] {
+                anyhow::bail!("Duplicate module file at index {}: {}", i, window[0]);
+            }
+            anyhow::bail!("Module files not sorted at index {}: {} >= {}", i, window[0], window[1]);
         }
     }
 
-    true
+    // 3. Stats consistency
+    if index.files.len() != index.stats.file_count {
+        anyhow::bail!("File count mismatch: files.len()={} vs stats.file_count={}", index.files.len(), index.stats.file_count);
+    }
+    
+    let computed_size: u64 = index.files.iter().map(|f| f.size).sum();
+    if computed_size != index.stats.total_size {
+        anyhow::bail!("Total size mismatch: computed={} vs stats.total_size={}", computed_size, index.stats.total_size);
+    }
+
+    Ok(())
 }

@@ -2,6 +2,24 @@ use clap::{Parser, Subcommand};
 use anyhow::Result;
 use std::path::PathBuf;
 
+/// # XRAY Determinism Policy
+/// 
+/// This crate enforces strict determinism for repository scanning.
+/// 
+/// ## Locked Policies
+/// 1. **LOC Counting**: Logical lines (`str::lines().count()`). Distinct from POSIX `wc -l`.
+/// 2. **Language Aggregation**: Files with "Unknown" language are EXCLUDED from the `languages` map.
+/// 3. **Canonical JSON**: Output MUST be sorted. `serde_json` MUST have `preserve_order` feature enabled.
+/// 4. **Digest Integrity**: The digest is computed on the *Canonical JSON* representation of the index.
+///    The index MUST be strictly sorted (files by path, modules by path) before digest computation.
+///    The digest function REFUSES to process unsorted inputs (no silent repairs).
+/// 5. **Derived Fields**: `languages` and `top_dirs` are derived summaries. While generated deterministically,
+///    they are currently NOT strictly validated against the `files` list during digest computation.
+///
+/// ## Architecture
+/// - **Producer** (`traversal`): Responsible for producing valid, sorted, normalized data.
+/// - **Consumer** (`digest`, `canonical`): Responsible for VALIDATING invariants. Fails if invalid.
+
 mod schema;
 mod canonical;
 mod digest;
@@ -10,6 +28,9 @@ mod loc;
 mod traversal;
 mod hash;
 mod language;
+
+#[cfg(test)]
+mod invariant_tests;
 
 #[derive(Parser)]
 #[command(name = "xray")]
