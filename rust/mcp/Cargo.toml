@@ -1,0 +1,23 @@
+[package]
+name = "cortex-mcp"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+anyhow = "1.0"
+thiserror = "1.0"
+url = "2.4"
+dirs = "5.0"
+walkdir = "2.4"
+# Optional async runtime for future rmcp support
+tokio = { version = "1.0", features = ["full"], optional = true }
+
+[features]
+default = ["transport-stdio", "resolver-local", "skills-core"]
+transport-stdio = []
+resolver-local = []
+skills-core = []
+deny-exec = []
+rmcp = ["tokio"]
