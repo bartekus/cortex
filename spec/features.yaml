@@ -1,39 +1,68 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
-#
-# Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
-#
-# Copyright (C) 2025  Bartek Kus
-#
-# This program is free software licensed under the terms of the GNU AGPL v3 or later.
-#
-# See https://www.gnu.org/licenses/ for license details.
-#
+# Cortex Feature Registry
+# Authoritative source of truth for Cortex capabilities and contracts.
+
 features:
-  # Architecture & Documentation
-  - id: ARCH_OVERVIEW
-    title: "Architecture documentation and project overview"
-    status: todo
-    spec: "overview.md"
+  # --- Core System ---
+  - id: CORE_REPO_CONTRACT
+    title: "Repository System Contract"
+    status: approved
+    spec: "spec/system/contract.md"
     owner: bart
+    group: core
     tests: []
+    depends_on: []
 
-  - id: SPEC_CORTEX
-    title: "Cortex (Go) Specification"
-    status: todo
-    spec: "core/go/cortex.md"
+  # --- Release & Distribution ---
+  - id: REL_ARTIFACT_LAYOUT
+    title: "Release Artifact Layout"
+    status: approved
+    spec: "spec/release/contract.md"
     owner: bart
+    group: release
     tests: []
+    depends_on:
+      - CORE_REPO_CONTRACT
 
-  - id: SPEC_MCP
-    title: "MCP (Rust) Specification"
-    status: todo
-    spec: "core/rust/mcp.md"
+  # --- CLI Interface ---
+  - id: CLI_CONTRACT
+    title: "CLI Command Interface"
+    status: approved
+    spec: "spec/cli/contract.md"
     owner: bart
-    tests: [ ]
+    group: cli
+    tests: []
+    depends_on:
+      - CORE_REPO_CONTRACT
 
-  - id: SPEC_XRAY
-    title: "XRAY (Rust) Specification"
-    status: todo
-    spec: "core/rust/xray.md"
+  # --- XRAY Engine ---
+  - id: XRAY_INDEX_FORMAT
+    title: "XRAY Index Format"
+    status: approved
+    spec: "spec/xray/index-format.md"
     owner: bart
-    tests: [ ]
+    group: xray
+    tests: []
+    depends_on:
+      - CORE_REPO_CONTRACT
+
+  - id: XRAY_SCAN_POLICY
+    title: "XRAY Scan Policy"
+    status: approved
+    spec: "spec/xray/scan-policy.md"
+    owner: bart
+    group: xray
+    tests: []
+    depends_on:
+      - XRAY_INDEX_FORMAT
+
+  # --- MCP Protocol ---
+  - id: MCP_ROUTER_CONTRACT
+    title: "MCP Router Contract"
+    status: approved
+    spec: "spec/mcp/contract.md"
+    owner: bart
+    group: mcp
+    tests: []
+    depends_on:
+      - CORE_REPO_CONTRACT

@@ -1,0 +1,38 @@
+{
+  "root": "cortex-fixture-repo",
+  "target": ".",
+  "files": [
+    {
+      "path": "Makefile",
+      "loc": 10,
+      "size": 200,
+      "language": "Makefile",
+      "digest": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "src/main.rs",
+      "loc": 5,
+      "size": 150,
+      "language": "Rust",
+      "digest": "sha256:d4735e3a265e16eee03f59718b9b5d03019c07d8b6c51f90da3a666eec13ab35"
+    }
+  ],
+  "stats": {
+    "files": 2,
+    "lines": 15,
+    "bytes": 350
+  },
+  "languages": {
+    "Makefile": {
+      "files": 1,
+      "lines": 10,
+      "bytes": 200
+    },
+    "Rust": {
+      "files": 1,
+      "lines": 5,
+      "bytes": 150
+    }
+  },
+  "digest": "d4fecc32014841b8964893798cf0a1c1a0170a400cc997784013098522199b0c"
+}

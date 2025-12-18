@@ -2,7 +2,9 @@
 
 Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
 
-It serves as the intelligent operational layer for the [Stagecraft](https://github.com/bartekus/stagecraft) ecosystem, providing deterministic context generation, repository scanning (via XRAY), and governance enforcement.
+It serves as an intelligent operational layer for AI-driven development, providing deterministic context generation, repository scanning (via XRAY), and governance enforcement.
+
+One example of a project that can benefit from Cortex is [Stagecraft](https://github.com/bartekus/stagecraft).
 
 ## Quickstart
 

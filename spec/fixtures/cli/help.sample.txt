@@ -1,0 +1,14 @@
+Usage:
+  cortex [command]
+
+Available Commands:
+  context     Context management tools
+  features    Feature registry management
+  gov         Governance utilities
+  run         Execute defined tasks
+  status      Check repository status
+  version     Print the version number of Cortex
+
+Flags:
+  -h, --help      help for cortex
+  -v, --verbose   enable verbose output

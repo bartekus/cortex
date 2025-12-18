@@ -22,7 +22,7 @@ func main() {
 
 // NewRootCommand constructs the Cortex root Cobra command.
 func NewRootCommand() *cobra.Command {
-	version := os.Getenv("STAGECRAFT_VERSION")
+	version := os.Getenv("CORTEX_VERSION")
 	if version == "" {
 		version = "0.0.0-dev"
 	}

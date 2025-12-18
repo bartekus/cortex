@@ -20,4 +20,3 @@ Run as an MCP server (stdio):
 ## Tools
 - `resolve_mcp(name)`: Resolves `owner/repo` or aliases to local paths.
 - `list_mounts()`: Shows active mounts.
-- `describe_skills()`: Shows registry.
