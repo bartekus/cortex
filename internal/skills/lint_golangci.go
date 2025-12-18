@@ -40,7 +40,6 @@ func (s *LintGolangCI) Run(ctx context.Context, deps *runner.Deps) runner.SkillR
 	// if res.Note != "" { fmt.Println(res.Note) }
 
 	out, err := cmd.CombinedOutput()
-
 	if err != nil {
 		// Distinguish execution error (4) vs lint failure (3)?
 		// golangci-lint returns 1 by default for issues.

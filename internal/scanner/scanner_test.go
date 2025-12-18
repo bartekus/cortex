@@ -130,13 +130,13 @@ func runGit(t *testing.T, dir string, args ...string) {
 
 func createFile(t *testing.T, dir, path string, content ...string) {
 	fullPath := filepath.Join(dir, path)
-	err := os.MkdirAll(filepath.Dir(fullPath), 0755)
+	err := os.MkdirAll(filepath.Dir(fullPath), 0o755)
 	require.NoError(t, err)
 
 	data := ""
 	if len(content) > 0 {
 		data = content[0]
 	}
-	err = os.WriteFile(fullPath, []byte(data), 0644)
+	err = os.WriteFile(fullPath, []byte(data), 0o644)
 	require.NoError(t, err)
 }

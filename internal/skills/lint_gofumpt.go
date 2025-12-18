@@ -73,7 +73,6 @@ func (s *LintGofumpt) Run(ctx context.Context, deps *runner.Deps) runner.SkillRe
 		batch := files[i:end]
 		cmd := exec.CommandContext(ctx, "gofumpt", append([]string{"-l"}, batch...)...)
 		out, err := cmd.Output()
-
 		// Exit status 0 means success (found/not found doesn't change exit code for -l usually,
 		// but gofumpt -l prints names of unformatted files).
 		// Wait, gofumpt -l returns 0 always unless error.

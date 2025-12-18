@@ -7,4 +7,3 @@ package commands
 
 // placeholder implementation for feature-map tests
 func deployImpl() {}
-

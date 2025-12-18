@@ -3,7 +3,12 @@
 
 SHELL := /bin/bash
 
-.PHONY: all build test lint fmt-check go-build go-test go-lint rust-build rust-test rust-lint rust-fmt-check
+# Tools versions (overridable)
+GOFUMPT_VERSION := v0.6.0
+GOLANGCI_LINT_VERSION := v1.63.4
+ADDLICENSE_VERSION := v1.1.1
+
+.PHONY: all build test lint fmt-check go-build go-test go-lint go-fmt-check rust-build rust-test rust-lint rust-fmt-check
 
 all: lint test build
 
@@ -15,8 +20,7 @@ test: go-test rust-test
 
 lint: go-lint rust-lint
 
-fmt-check: rust-fmt-check
-	@echo "fmt-check: (go formatting checks are enforced via lint/tools; add gofmt/goimports checks here if desired)"
+fmt-check: go-fmt-check rust-fmt-check
 
 # --- Go (repo root) ---
 
@@ -28,6 +32,17 @@ go-test:
 
 go-lint:
 	golangci-lint run ./...
+
+go-fmt-check:
+	@echo "Checking Go formatting..."
+	@if [ -n "$$(gofumpt -l .)" ]; then \
+		echo "Go code is not formatted (gofumpt). Run 'gofumpt -w .'"; \
+		exit 1; \
+	fi
+	@if [ -n "$$(goimports -l .)" ]; then \
+		echo "Go code has missing/unordered imports. Run 'goimports -w .'"; \
+		exit 1; \
+	fi
 
 # --- Rust (rust/ root) ---
 

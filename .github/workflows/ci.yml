@@ -30,18 +30,24 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: go.mod
+          cache: true
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         with:
           components: rustfmt, clippy
 
+      - name: Rust Cache
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: rust
+
       - name: Install Go Tools
         run: |
-          go install mvdan.cc/gofumpt@latest
+          go install mvdan.cc/gofumpt@v0.6.0
           go install golang.org/x/tools/cmd/goimports@latest
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
-          go install github.com/google/addlicense@latest
+          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
+          go install github.com/google/addlicense@v1.1.1
 
       - name: Lint
         run: make lint
@@ -54,4 +60,3 @@ jobs:
 
       - name: Build
         run: make build
-

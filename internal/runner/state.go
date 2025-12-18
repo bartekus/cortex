@@ -61,7 +61,7 @@ func (s *StateStore) ReadSkill(skillID string) (*SkillResult, error) {
 // WriteLastRun saves the execution summary.
 func (s *StateStore) WriteLastRun(last LastRun) (err error) {
 	path := s.lastRunPath()
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 
@@ -84,7 +84,7 @@ func (s *StateStore) WriteLastRun(last LastRun) (err error) {
 // WriteSkillResult saves a skill's result.
 func (s *StateStore) WriteSkillResult(res SkillResult) (err error) {
 	path := filepath.Join(s.baseDir, "skills", res.Skill+".json")
-	if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
 		return err
 	}
 
