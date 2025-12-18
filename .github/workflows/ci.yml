@@ -42,12 +42,8 @@ jobs:
         with:
           workspaces: rust
 
-      - name: Install Go Tools
-        run: |
-          go install mvdan.cc/gofumpt@v0.6.0
-          go install golang.org/x/tools/cmd/goimports@v0.27.0
-          go install github.com/golangci/golangci-lint/cmd/golangci-lint@v1.63.4
-          go install github.com/google/addlicense@v1.1.1
+      - name: Install Tools
+        run: make tools-install
 
       - name: Lint
         run: make lint

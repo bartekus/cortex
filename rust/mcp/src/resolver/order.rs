@@ -26,19 +26,37 @@ impl<F: Fs> ResolveEngine<F> {
             let map = alias_map::load_alias_map(&self.fs, &alias_path)?;
             if let Some(p) = alias_map::resolve_alias(&map, name) {
                 let root = self.fs.canonicalize(&p).unwrap_or(p);
-                return Ok(ResolveResponse {
-                    status: ResolveStatus::Resolved,
-                    resolved_id: Some(format!("cortex.repo.{}", name.replace('/', "."))),
-                    kind: Some("local".to_string()),
-                    root: Some(root.to_string_lossy().to_string()),
-                    capabilities: vec![
-                        "read_file".to_string(),
-                        "list_files".to_string(),
-                        "search".to_string(),
-                    ],
-                    tried,
-                    fix_hint: None,
-                });
+
+                // SECURITY: Ensure the aliased path is within one of the allowed workspace roots.
+                let mut allowed = false;
+                for ws_root in &self.workspace_roots {
+                    // We check if the 'root' path starts with the workspace root.
+                    // We use the canonicalized version for safety.
+                    if root.starts_with(ws_root) {
+                        allowed = true;
+                        break;
+                    }
+                }
+
+                if allowed {
+                    return Ok(ResolveResponse {
+                        status: ResolveStatus::Resolved,
+                        resolved_id: Some(format!("cortex.repo.{}", name.replace('/', "."))),
+                        kind: Some("local".to_string()),
+                        root: Some(root.to_string_lossy().to_string()),
+                        capabilities: vec![
+                            "read_file".to_string(),
+                            "list_files".to_string(),
+                            "search".to_string(),
+                        ],
+                        tried,
+                        fix_hint: None,
+                    });
+                } else {
+                    // Intentionally ignore this alias if it violates security boundaries.
+                    // Ideally we would log a warning here (eprintln or log crate), but to keep
+                    // this logic pure we simply treat it as not found and proceed to other candidates.
+                }
             }
         }
 
@@ -135,5 +153,40 @@ mod tests {
         assert_eq!(resp.root.unwrap(), "/User/dev/cortex");
     }
 
-    // Additional tests removed for brevity but logic is sound
+    #[test]
+    fn test_resolver_alias_security_containment() {
+        let fs = MemFs::new();
+        // Setup a fake home and a fake sensitive path
+        fs.add_dir("/User/bart/Dev");
+        fs.add_dir("/etc/secret");
+
+        let roots = vec![PathBuf::from("/User/bart/Dev")];
+        // Mock alias map pointing to outside root
+        fs.add_file(
+            "/User/bart/.cortex/mcp-aliases.json",
+            r#"{
+            "hack": "/etc/secret"
+        }"#,
+        );
+
+        let engine = ResolveEngine::new(fs, roots);
+
+        // Without the fix, this would resolve. With the fix, it should fail (return unresolved or ignore the alias)
+        // Our logic treats disallowed alias as "not found" so it falls through to other matchers.
+        // Since no other matchers will match "hack", it should return Unresolved or a fix_hint depending on logic.
+        // Actually, if it falls through, it will eventually hit the "Unresolved" at the bottom.
+        let resp = engine.resolve("hack").unwrap();
+
+        // It should NOT be Resolved pointing to /etc/secret
+        if resp.status == ResolveStatus::Resolved {
+            assert_ne!(
+                resp.root.unwrap(),
+                "/etc/secret",
+                "Security bypass: alias allowed outside workspace root!"
+            );
+        }
+
+        // Ideally it's Unresolved
+        assert_eq!(resp.status, ResolveStatus::Unresolved);
+    }
 }

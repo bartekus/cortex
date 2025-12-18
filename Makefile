@@ -7,10 +7,9 @@ SHELL := /bin/bash
 GOFUMPT_VERSION := v0.6.0
 GOIMPORTS_VERSION := v0.27.0
 GOLANGCI_LINT_VERSION := v1.63.4
-GOLANGCI_LINT_VERSION := v1.63.4
 ADDLICENSE_VERSION := v1.1.1
 
-.PHONY: all build test lint fmt-check go-build go-test go-lint go-fmt-check rust-build rust-test rust-lint rust-fmt-check
+.PHONY: all build test lint fmt-check go-build go-test go-lint go-mod-tidy-check go-fmt-check tools-install rust-build rust-test rust-lint rust-fmt-check
 
 all: lint test build
 
@@ -27,13 +26,32 @@ fmt-check: go-fmt-check rust-fmt-check
 # --- Go (repo root) ---
 
 go-build:
-	go build -o ./bin/cortex ./cmd/cortex
+	go build -trimpath -ldflags="-s -w" -o ./bin/cortex ./cmd/cortex
 
 go-test:
 	go test ./...
 
-go-lint:
+go-lint: go-mod-tidy-check
 	golangci-lint run ./...
+
+go-mod-tidy-check:
+	@echo "Checking go.mod/go.sum tidiness..."
+	@cp go.mod go.mod.bak
+	@cp go.sum go.sum.bak
+	@go mod tidy
+	@if ! diff go.mod go.mod.bak > /dev/null; then \
+		echo "go.mod is not tidy"; \
+		mv go.mod.bak go.mod; \
+		mv go.sum.bak go.sum; \
+		exit 1; \
+	fi
+	@if ! diff go.sum go.sum.bak > /dev/null; then \
+		echo "go.sum is not tidy"; \
+		mv go.mod.bak go.mod; \
+		mv go.sum.bak go.sum; \
+		exit 1; \
+	fi
+	@rm go.mod.bak go.sum.bak
 
 go-fmt-check:
 	@echo "Checking Go formatting..."

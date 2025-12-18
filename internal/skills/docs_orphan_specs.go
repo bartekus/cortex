@@ -95,11 +95,7 @@ func (s *DocsOrphanSpecs) Run(ctx context.Context, deps *runner.Deps) runner.Ski
 	// Exemptions
 	isExempt := func(path string) bool {
 		// spec/README.md or spec/**/README.md
-		if strings.HasSuffix(strings.ToLower(path), "readme.md") {
-			return true
-		}
-		// spec/features.yaml (not .md, but good to note)
-		return false
+		return strings.HasSuffix(strings.ToLower(path), "readme.md")
 	}
 
 	for _, path := range allMdFiles {

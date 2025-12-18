@@ -91,6 +91,20 @@ jobs:
       - name: Show rust-dist layout
         run: ls -R rust-dist
 
+      - name: Smoke Test (Release Candidate)
+        run: |
+          # 1. Test XRAY binary for linux_amd64 (ubuntu-latest host)
+          chmod +x rust-dist/rust-binaries-linux_amd64/xray
+          ./rust-dist/rust-binaries-linux_amd64/xray --help
+          
+          # 2. Test Cortex build (simulate GoReleaser build)
+          go build -trimpath -ldflags="-s -w -X main.version=smoke-test" -o cortex-smoke ./cmd/cortex
+          ./cortex-smoke --version
+
+          # 3. Test cortex-mcp binary (verify it runs/displays help)
+          chmod +x rust-dist/rust-binaries-linux_amd64/cortex-mcp
+          ./rust-dist/rust-binaries-linux_amd64/cortex-mcp --help
+
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@v5
         with:
