@@ -16,10 +16,26 @@ use std::process::Command;
 fn test_determinism_empty_scan() {
     // 1. Setup paths
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
-    let _target_dir = PathBuf::from(&manifest_dir).join("target/debug/xray");
-    let fixture_dir = PathBuf::from(&manifest_dir).join("tests/fixtures/min_repo");
     let output_dir_1 = PathBuf::from(&manifest_dir).join("tests/outputs/run1");
     let output_dir_2 = PathBuf::from(&manifest_dir).join("tests/outputs/run2");
+
+    // Create a temporary directory for the fixture to ensure .git exists (CI determinism)
+    let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
+    let fixture_src = PathBuf::from(&manifest_dir).join("tests/fixtures/min_repo");
+    let fixture_dst = temp_dir.path().join("min_repo");
+
+    // Copy fixture recursively
+    let copy_options = fs_extra::dir::CopyOptions::new().overwrite(true).copy_inside(true);
+    fs_extra::dir::copy(&fixture_src, temp_dir.path(), &copy_options).expect("Failed to copy fixture");
+    
+    // Rename if necessary (copy_inside moves content of src into dst, so we might have temp_dir/min_repo)
+    // Actually fs_extra::dir::copy with fixture_src being .../min_repo and destination temp_dir.path()
+    // will create temp_dir.path()/min_repo.
+
+    // Create fake .git config to satisfy requirements
+    let git_dir = fixture_dst.join(".git");
+    fs::create_dir_all(&git_dir).expect("Failed to create .git dir");
+    fs::write(git_dir.join("config"), "[core]\n\trepositoryformatversion = 0\n").expect("Failed to write .git/config");
 
     // Clean outputs
     let _ = fs::remove_dir_all(&output_dir_1);
@@ -38,7 +54,7 @@ fn test_determinism_empty_scan() {
         .arg("run")
         .arg("--")
         .arg("scan")
-        .arg(&fixture_dir)
+        .arg(&fixture_dst)
         .arg("--output")
         .arg(&output_dir_1)
         .current_dir(&manifest_dir)
@@ -51,7 +67,7 @@ fn test_determinism_empty_scan() {
         .arg("run")
         .arg("--")
         .arg("scan")
-        .arg(&fixture_dir)
+        .arg(&fixture_dst)
         .arg("--output")
         .arg(&output_dir_2)
         .current_dir(&manifest_dir)

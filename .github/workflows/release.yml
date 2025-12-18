@@ -99,7 +99,7 @@ jobs:
           
           # 2. Test Cortex build (simulate GoReleaser build)
           go build -trimpath -ldflags="-s -w -X main.version=smoke-test" -o cortex-smoke ./cmd/cortex
-          ./cortex-smoke --version
+          ./cortex-smoke version
 
           # 3. Test cortex-mcp binary (verify it runs/displays help)
           chmod +x rust-dist/rust-binaries-linux_amd64/cortex-mcp
