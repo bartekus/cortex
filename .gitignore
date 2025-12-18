@@ -39,6 +39,8 @@ rust/xray/target/
 rust/xray/tests/outputs/
 
 test-state/
+rust-dist/
+dist/
 
 .cortex/
 .bin/
