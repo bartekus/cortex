@@ -1,0 +1,41 @@
+version: 2
+project_name: cortex
+
+builds:
+  - id: cortex
+    main: ./cmd/cortex
+    binary: cortex
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    ignore:
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w -X main.version={{ .Version }}
+
+archives:
+  - id: default
+    ids: [cortex]
+    # Zip on Windows, tar.gz elsewhere
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - README.md
+      - LICENSE
+
+      # Bundle rust binaries that match the archive target:
+      - src: rust-dist/rust-binaries-{{ .Os }}_{{ .Arch }}/xray*
+        dst: .
+        strip_parent: true
+      - src: rust-dist/rust-binaries-{{ .Os }}_{{ .Arch }}/cortex-mcp*
+        dst: .
+        strip_parent: true
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  github:
+    owner: bartekus
+    name: cortex
