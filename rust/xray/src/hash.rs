@@ -14,7 +14,9 @@ pub fn compute_file_hash(path: &Path) -> Result<String> {
     let mut buffer = [0; 8192];
 
     loop {
-        let count = reader.read(&mut buffer).context("Failed to read file for hashing")?;
+        let count = reader
+            .read(&mut buffer)
+            .context("Failed to read file for hashing")?;
         if count == 0 {
             break;
         }

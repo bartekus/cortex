@@ -13,7 +13,7 @@ pub struct Mount {
 
 #[derive(Clone, Default)]
 pub struct MountRegistry {
-    // RwLock for thread-safe concurrent access in the future, 
+    // RwLock for thread-safe concurrent access in the future,
     // though stdio server is currently sequential.
     mounts: Arc<RwLock<BTreeMap<String, Mount>>>,
 }

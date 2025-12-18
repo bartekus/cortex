@@ -25,29 +25,33 @@ jobs:
     steps:
       - name: Checkout Cortex
         uses: actions/checkout@v4
-        with:
-          path: cortex
-
-      - name: Checkout Cortex
-        uses: actions/checkout@v4
-        with:
-          repository: bartekus/cortex
-          path: cortex
 
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version-file: cortex/go.mod
+          go-version-file: go.mod
 
-      - name: Install Tools
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: rustfmt, clippy
+
+      - name: Install Go Tools
         run: |
           go install mvdan.cc/gofumpt@latest
           go install golang.org/x/tools/cmd/goimports@latest
           go install github.com/golangci/golangci-lint/cmd/golangci-lint@latest
           go install github.com/google/addlicense@latest
 
-      - name: Build Cortex
-        run: |
-          cd cortex
-          go build -o ./bin/cortex ./cmd/cortex
+      - name: Lint
+        run: make lint
+
+      - name: Format Check
+        run: make fmt-check
+
+      - name: Test
+        run: make test
+
+      - name: Build
+        run: make build
 

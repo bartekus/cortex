@@ -1,7 +1,7 @@
-use std::fs::File;
-use std::io::{Read, BufReader};
-use std::path::Path;
 use anyhow::{Context, Result};
+use std::fs::File;
+use std::io::{BufReader, Read};
+use std::path::Path;
 
 pub const LOC_BIG_FILE_CAP_BYTES: u64 = 2 * 1024 * 1024; // 2MB
 
@@ -13,7 +13,7 @@ pub struct LocStats {
 }
 
 /// Computes LOC Stats for a given file path.
-/// 
+///
 /// Rules:
 /// - If file > 2MB, return skipped=true, loc=0.
 /// - If file content is not valid UTF-8, return skipped=true, loc=0.
@@ -41,14 +41,16 @@ pub fn compute_loc(path: &Path) -> Result<LocStats> {
     let file = File::open(path).context("Failed to open file")?;
     let mut reader = BufReader::new(file);
     let mut content = Vec::new();
-    
+
     // Read all to check UTF-8 validitity and simplicity.
     // For 2MB max, reading into memory is acceptable and safer for UTF-8 check.
-    reader.read_to_end(&mut content).context("Failed to read file content")?;
+    reader
+        .read_to_end(&mut content)
+        .context("Failed to read file content")?;
 
     match String::from_utf8(content) {
         Ok(text) => {
-            // Count lines. 
+            // Count lines.
             // We count lines as number of lines with content, or just newlines?
             // "Standard" `wc -l` counts newlines.
             // If the last line has no newline, it might not be counted by some tools.
@@ -58,7 +60,7 @@ pub fn compute_loc(path: &Path) -> Result<LocStats> {
             // "a" has 1 line.
             // "a\n" has 1 line? or 2?
             // "a\nb" has 2 lines.
-            
+
             // We use `lines().count()` which counts lines *terminated* or *separated* by \n.
             // Edge cases:
             // "a\n" -> 1 line
@@ -68,13 +70,13 @@ pub fn compute_loc(path: &Path) -> Result<LocStats> {
             // This is "Logical Lines", distinct from POSIX `wc -l` which counts newlines.
             // This behavior is LOCKED for XRAY determinism.
             let loc = text.lines().count() as u64;
-            
+
             // Re-verify edge case:
             // "a\n" -> lines() yields ["a"]. count = 1.
             // "a"   -> lines() yields ["a"]. count = 1.
             // ""    -> lines() yields []. count = 0.
             // This seems reasonable for "Loc".
-            
+
             Ok(LocStats {
                 loc,
                 size,
@@ -125,7 +127,7 @@ mod tests {
 
     #[test]
     fn test_single_line_no_newline() {
-         let mut file = NamedTempFile::new().unwrap();
+        let mut file = NamedTempFile::new().unwrap();
         write!(file, "line1").unwrap(); // 1 line
         let stats = compute_loc(file.path()).unwrap();
         assert_eq!(stats.loc, 1);
@@ -143,7 +145,7 @@ mod tests {
     fn test_binary_skipped() {
         let mut file = NamedTempFile::new().unwrap();
         // invalid utf8 sequence
-        file.write_all(&[0, 159, 146, 150]).unwrap(); 
+        file.write_all(&[0, 159, 146, 150]).unwrap();
         let stats = compute_loc(file.path()).unwrap();
         assert!(stats.skipped);
         assert_eq!(stats.loc, 0);

@@ -67,42 +67,66 @@ fn test_determinism_empty_scan() {
     let content2 = fs::read_to_string(&file2).expect("Failed to read output 2");
 
     assert_eq!(content1, content2, "Outputs are not identical!");
-    
+
     // 5. Verify Content (Basic)
     assert!(content1.contains("\"schemaVersion\":\"1.0.0\""));
     assert!(!content1.contains("indexedAt")); // Forbidden field check
 
     // 6. Verify Traversal and Ignore Logic
     // Should contain main.go
-    assert!(content1.contains("\"path\":\"main.go\""), "main.go missing from index");
+    assert!(
+        content1.contains("\"path\":\"main.go\""),
+        "main.go missing from index"
+    );
     // Verify Hash (Phase B)
     let expected_hash = "sha256:ad1c40d0f5d7d86f11336e5fd914f85df225adea12627838e4a03f91815bedfe";
-    assert!(content1.contains(expected_hash), "main.go hash incorrect or missing");
+    assert!(
+        content1.contains(expected_hash),
+        "main.go hash incorrect or missing"
+    );
 
     // Should NOT contain vendor/ignored.txt (it is in strict ignore list)
-    assert!(!content1.contains("vendor/ignored.txt"), "vendor/ignored.txt should be skipped");
-    assert!(!content1.contains("ignored.txt"), "ignored.txt should be skipped");
-    
+    assert!(
+        !content1.contains("vendor/ignored.txt"),
+        "vendor/ignored.txt should be skipped"
+    );
+    assert!(
+        !content1.contains("ignored.txt"),
+        "ignored.txt should be skipped"
+    );
+
     // 7. Verify Phase C1 Aggregation
     assert!(content1.contains("\"Go\":1"), "Language Go missing");
     assert!(content1.contains("\"Rust\":1"), "Language Rust missing");
-    assert!(content1.contains("\"Markdown\":1"), "Language Markdown missing");
+    assert!(
+        content1.contains("\"Markdown\":1"),
+        "Language Markdown missing"
+    );
     assert!(content1.contains("\"JSON\":1"), "Language JSON missing");
-    
+
     assert!(content1.contains("\"cmd\":1"), "TopDir cmd missing");
     // "." might be implicit or explicit depending on map serialization.
     // "moduleFiles":["package.json"]
-    assert!(content1.contains("\"package.json\""), "package.json missing from module_files");
+    assert!(
+        content1.contains("\"package.json\""),
+        "package.json missing from module_files"
+    );
     // Ensure .git is strictly inside moduleFiles using json parsing or strict string match
     // Current string structure: "moduleFiles":[".git","package.json"] or similar
     // We can rely on canonical order.
-    assert!(content1.contains("\"moduleFiles\":[\".git\",\"package.json\"]"), "moduleFiles structure mismatch or missing .git");
+    assert!(
+        content1.contains("\"moduleFiles\":[\".git\",\"package.json\"]"),
+        "moduleFiles structure mismatch or missing .git"
+    );
 
     // 8. Verify Unknown Policy
     // We expect "Unknown" to be EXCLUDED from "languages" map.
     // The fixture likely has files that might be unknown if I add one, but min_repo covers standard ones.
     // If we can't easily add a file here, we verify that "Unknown" is NOT present in keys if it were.
-    assert!(!content1.contains("\"Unknown\":"), "Unknown language should not be aggregated");
+    assert!(
+        !content1.contains("\"Unknown\":"),
+        "Unknown language should not be aggregated"
+    );
 }
 
 #[test]

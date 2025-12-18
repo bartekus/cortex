@@ -92,7 +92,7 @@ func (s *DocsYaml) Run(ctx context.Context, deps *runner.Deps) runner.SkillResul
 		if err := dec.Decode(&node); err != nil {
 			failedFiles = append(failedFiles, fmt.Sprintf("%s: invalid YAML: %v", path, err))
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	if len(failedFiles) > 0 {

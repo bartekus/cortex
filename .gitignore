@@ -38,7 +38,9 @@ rust/mcp/tests/outputs/
 rust/xray/target/
 rust/xray/tests/outputs/
 
-# Temporary directories and local artifact
-.cortex
+test-state/
+
+.cortex/
+.bin/
 bin/
 bin/cortex

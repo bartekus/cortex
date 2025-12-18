@@ -20,7 +20,7 @@ impl MemFs {
         self.ensure_parent(&path);
         self.files.lock().unwrap().insert(path, content.into());
     }
-    
+
     pub fn add_dir(&self, path: impl Into<PathBuf>) {
         let path = path.into();
         self.ensure_parent(&path);
@@ -44,15 +44,18 @@ impl MemFs {
 impl Fs for MemFs {
     fn read_to_string(&self, path: &Path) -> Result<String> {
         let files = self.files.lock().unwrap();
-        files.get(path).cloned().ok_or_else(|| anyhow!("File not found: {:?}", path))
+        files
+            .get(path)
+            .cloned()
+            .ok_or_else(|| anyhow!("File not found: {:?}", path))
     }
 
     fn read_dir(&self, path: &Path) -> Result<Vec<PathBuf>> {
         let files = self.files.lock().unwrap();
         let dirs = self.dirs.lock().unwrap();
-        
+
         let mut entries = Vec::new();
-        
+
         // Find direct children in files
         for file_path in files.keys() {
             if let Some(parent) = file_path.parent() {
@@ -61,7 +64,7 @@ impl Fs for MemFs {
                 }
             }
         }
-        
+
         // Find direct children in dirs
         for dir_path in dirs.iter() {
             if let Some(parent) = dir_path.parent() {
@@ -70,10 +73,10 @@ impl Fs for MemFs {
                 }
             }
         }
-        
+
         entries.sort();
         entries.dedup();
-        
+
         Ok(entries)
     }
 

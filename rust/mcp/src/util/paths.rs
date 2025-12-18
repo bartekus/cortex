@@ -1,4 +1,4 @@
-use std::path::{Path, Component};
+use std::path::{Component, Path};
 
 pub fn normalize_path(path: &Path) -> String {
     let mut s = path.to_string_lossy().replace("\\", "/");
@@ -9,5 +9,7 @@ pub fn normalize_path(path: &Path) -> String {
 }
 
 pub fn path_depth(path: &Path) -> usize {
-    path.components().filter(|c| matches!(c, Component::Normal(_))).count()
+    path.components()
+        .filter(|c| matches!(c, Component::Normal(_)))
+        .count()
 }

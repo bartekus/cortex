@@ -9,8 +9,10 @@ Available Commands:
   completion  Generate the autocompletion script for the specified shell
   context     AI context pipeline commands
   feature     Generate feature traceability report
+  features    Manage feature dependency graphs and documentation
   gov         Governance checks for Cortex
   help        Help about any command
+  run         Orchestrate Cortex skills and governance checks
   status      Show Cortex project status and roadmap analysis
   version     Print the version number of Cortex
   xray        Run XRAY scan

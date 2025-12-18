@@ -1,6 +1,6 @@
 // Router module
-pub mod mounts;
 pub mod cache;
+pub mod mounts;
 
 use crate::io::fs::RealFs;
 use crate::resolver::order::ResolveEngine;
@@ -37,15 +37,17 @@ impl Router {
 
     pub fn handle_request(&self, req: &JsonRpcRequest) -> JsonRpcResponse {
         match req.method.as_str() {
-            "initialize" => {
-                json_rpc_ok(req.id.clone(), json!({
+            "initialize" => json_rpc_ok(
+                req.id.clone(),
+                json!({
                     "protocolVersion": "2024-11-05",
                     "capabilities": get_server_capabilities(),
                     "serverInfo": { "name": "cortex-mcp", "version": "0.1.0" }
-                }))
-            },
-            "tools/list" => {
-                 json_rpc_ok(req.id.clone(), json!({
+                }),
+            ),
+            "tools/list" => json_rpc_ok(
+                req.id.clone(),
+                json!({
                     "tools": [
                         {
                             "name": "resolve_mcp",
@@ -85,25 +87,42 @@ impl Router {
                             }
                         }
                     ]
-                }))
-            },
+                }),
+            ),
+
             "tools/call" => {
-                let params = req.params.as_ref().ok_or("No params").and_then(|p| p.as_object().ok_or("Params not object"));
-                if let Err(_) = params {
-                    return json_rpc_error(req.id.clone(), -32602, "Invalid params: must be an object");
+                let params_result = req
+                    .params
+                    .as_ref()
+                    .ok_or(())
+                    .and_then(|p| p.as_object().ok_or(()));
+                if params_result.is_err() {
+                    return json_rpc_error(
+                        req.id.clone(),
+                        -32602,
+                        "Invalid params: must be an object",
+                    );
                 }
-                let params = params.unwrap();
+                let params = params_result.unwrap();
 
                 let name = params.get("name").and_then(|n| n.as_str());
                 if name.is_none() {
-                    return json_rpc_error(req.id.clone(), -32602, "Invalid params: missing 'name'");
+                    return json_rpc_error(
+                        req.id.clone(),
+                        -32602,
+                        "Invalid params: missing 'name'",
+                    );
                 }
                 let name = name.unwrap();
 
                 let args_value = params.get("arguments");
                 if let Some(v) = args_value {
                     if !v.is_object() {
-                        return json_rpc_error(req.id.clone(), -32602, "Invalid params: 'arguments' must be an object");
+                        return json_rpc_error(
+                            req.id.clone(),
+                            -32602,
+                            "Invalid params: 'arguments' must be an object",
+                        );
                     }
                 }
                 let args = args_value.and_then(|a| a.as_object());
@@ -118,7 +137,11 @@ impl Router {
                         // Strict validation: resolve_mcp requires 'name' inside arguments
                         let target = args.and_then(|a| a.get("name")).and_then(|n| n.as_str());
                         if target.is_none() {
-                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments.name is required");
+                            return json_rpc_error(
+                                req.id.clone(),
+                                -32602,
+                                "Invalid params: arguments.name is required",
+                            );
                         }
                         let target = target.unwrap();
 
@@ -126,7 +149,8 @@ impl Router {
                             Ok(resp) => {
                                 // Side effect: Register mount if resolved
                                 if resp.status == crate::protocol::types::ResolveStatus::Resolved {
-                                    if let (Some(root), Some(rid)) = (&resp.root, &resp.resolved_id) {
+                                    if let (Some(root), Some(rid)) = (&resp.root, &resp.resolved_id)
+                                    {
                                         self.mounts.register(crate::router::mounts::Mount {
                                             name: target.to_string(),
                                             root: root.clone(),
@@ -142,41 +166,66 @@ impl Router {
                                 let text_val = serde_json::to_string(&resp).unwrap();
 
                                 // Direct result object
-                                json_rpc_ok(req.id.clone(), json!({
-                                    "content": [
-                                        { "type": "json", "json": json_val },
-                                        { "type": "text", "text": text_val }
-                                    ]
-                                }))
+                                json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({
+                                        "content": [
+                                            { "type": "json", "json": json_val },
+                                            { "type": "text", "text": text_val }
+                                        ]
+                                    }),
+                                )
                             }
-                            Err(e) => json_rpc_error(req.id.clone(), -32603, &format!("Resolution failed: {}", e))
+                            Err(e) => json_rpc_error(
+                                req.id.clone(),
+                                -32603,
+                                &format!("Resolution failed: {}", e),
+                            ),
                         }
-                    },
+                    }
                     "list_mounts" => {
                         if !args_is_empty {
-                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                            return json_rpc_error(
+                                req.id.clone(),
+                                -32602,
+                                "Invalid params: arguments must be an empty object",
+                            );
                         }
                         let list = self.mounts.list();
-                        json_rpc_ok(req.id.clone(), json!({
-                            "content": [{ "type": "json", "json": list }]
-                        }))
-                    },
+                        json_rpc_ok(
+                            req.id.clone(),
+                            json!({
+                                "content": [{ "type": "json", "json": list }]
+                            }),
+                        )
+                    }
                     "describe_skills" => {
                         if !args_is_empty {
-                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                            return json_rpc_error(
+                                req.id.clone(),
+                                -32602,
+                                "Invalid params: arguments must be an empty object",
+                            );
                         }
                         let skills = json!({
                             "repo.read": { "methods": ["resolve_mcp"], "notes": "Resolve repo names to local paths" },
                             "format:gofumpt": { "notes": "Planned" },
                             "governance.audit": { "notes": "Planned" }
                         });
-                        json_rpc_ok(req.id.clone(), json!({
-                            "content": [{ "type": "json", "json": skills }]
-                        }))
-                    },
+                        json_rpc_ok(
+                            req.id.clone(),
+                            json!({
+                                "content": [{ "type": "json", "json": skills }]
+                            }),
+                        )
+                    }
                     "get_capabilities" => {
                         if !args_is_empty {
-                            return json_rpc_error(req.id.clone(), -32602, "Invalid params: arguments must be an empty object");
+                            return json_rpc_error(
+                                req.id.clone(),
+                                -32602,
+                                "Invalid params: arguments must be an empty object",
+                            );
                         }
                         // Return the same capabilities object we use for initialize
                         // plus any extended metadata
@@ -186,19 +235,27 @@ impl Router {
                             "protocol": { "type": "mcp-router", "supports_dynamic_mounts": true, "supports_aliases": true },
                             "resolution": { "default_order": ["alias_map", "git_remote_match", "folder_name_match"] }
                         });
-                        json_rpc_ok(req.id.clone(), json!({
-                            "content": [{ "type": "json", "json": caps }]
-                        }))
-                    },
-                    _ => json_rpc_error(req.id.clone(), -32601, "Tool not found")
+                        json_rpc_ok(
+                            req.id.clone(),
+                            json!({
+                                "content": [{ "type": "json", "json": caps }]
+                            }),
+                        )
+                    }
+                    _ => json_rpc_error(req.id.clone(), -32601, "Tool not found"),
                 }
+            }
+            "notifications/initialized" => JsonRpcResponse {
+                jsonrpc: "2.0".into(),
+                result: None,
+                error: None,
+                id: None,
             },
-            "notifications/initialized" => {
-                 JsonRpcResponse { jsonrpc: "2.0".into(), result: None, error: None, id: None }
-            }
-            _ => {
-                json_rpc_error(req.id.clone(), -32601, &format!("Method not found: {}", req.method))
-            }
+            _ => json_rpc_error(
+                req.id.clone(),
+                -32601,
+                &format!("Method not found: {}", req.method),
+            ),
         }
     }
 }

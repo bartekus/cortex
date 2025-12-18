@@ -38,7 +38,8 @@ pub fn detect_language(path: &Path) -> String {
             _ => "Unknown", // LOCKED POLICY: Returns "Unknown".
                             // Aggregation logic MUST exclude "Unknown" from the "languages" map.
                             // This ensures the map only contains detected languages with high confidence.
-        }.to_string()
+        }
+        .to_string()
     } else {
         "Unknown".to_string() // Policy: No extension = Unknown
     }

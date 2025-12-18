@@ -1,11 +1,16 @@
-use clap::{Parser, Subcommand};
 use anyhow::Result;
+use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+mod canonical;
+mod digest;
+mod hash;
+mod language;
+mod loc;
 /// # XRAY Determinism Policy
-/// 
+///
 /// This crate enforces strict determinism for repository scanning.
-/// 
+///
 /// ## Locked Policies
 /// 1. **LOC Counting**: Logical lines (`str::lines().count()`). Distinct from POSIX `wc -l`.
 /// 2. **Language Aggregation**: Files with "Unknown" language are EXCLUDED from the `languages` map.
@@ -19,15 +24,9 @@ use std::path::PathBuf;
 /// ## Architecture
 /// - **Producer** (`traversal`): Responsible for producing valid, sorted, normalized data.
 /// - **Consumer** (`digest`, `canonical`): Responsible for VALIDATING invariants. Fails if invalid.
-
 mod schema;
-mod canonical;
-mod digest;
-mod write;
-mod loc;
 mod traversal;
-mod hash;
-mod language;
+mod write;
 
 #[cfg(test)]
 mod invariant_tests;
@@ -76,22 +75,28 @@ fn main() -> Result<()> {
 
 fn run_scan(target: &str, output: Option<String>) -> Result<()> {
     let repo_root = std::env::current_dir()?;
-    let repo_slug = repo_root.file_name().unwrap_or_default().to_string_lossy().to_string();
+    let repo_slug = repo_root
+        .file_name()
+        .unwrap_or_default()
+        .to_string_lossy()
+        .to_string();
 
     // 1. Scan Target
     let target_path = PathBuf::from(target);
     let scan_result = traversal::scan_target(&target_path)?;
 
     // 2. Build Index
-    let mut index = schema::XrayIndex::default();
-    index.root = repo_slug.clone();
-    index.target = target.to_string();
-    index.files = scan_result.files;
-    index.stats = scan_result.stats;
-    index.languages = scan_result.languages;
-    index.top_dirs = scan_result.top_dirs;
-    index.module_files = scan_result.module_files;
-    
+    let mut index = schema::XrayIndex {
+        root: repo_slug.clone(),
+        target: target.to_string(),
+        files: scan_result.files,
+        stats: scan_result.stats,
+        languages: scan_result.languages,
+        top_dirs: scan_result.top_dirs,
+        module_files: scan_result.module_files,
+        ..Default::default()
+    };
+
     // 3. Compute digest
     let digest_str = digest::calculate_digest(&index)?;
     index.digest = digest_str;
@@ -105,12 +110,12 @@ fn run_scan(target: &str, output: Option<String>) -> Result<()> {
         Some(p) => PathBuf::from(p),
         None => repo_root.join(".xraycache").join(&repo_slug).join("data"),
     };
-    
+
     let out_file = out_dir.join("index.json");
 
     // 6. Write
     write::write_atomic(&out_file, &bytes)?;
-    
+
     println!("XRAY scan complete. Digest: {}", index.digest);
     println!("Written to: {}", out_file.display());
 

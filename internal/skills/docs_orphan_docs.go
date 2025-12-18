@@ -199,7 +199,7 @@ func (s *DocsOrphanDocs) Run(ctx context.Context, deps *runner.Deps) runner.Skil
 				Note:     fmt.Sprintf("Failed to scan %s: %v", src, err),
 			}
 		}
-		f.Close()
+		_ = f.Close()
 	}
 
 	// 4. Calculate Orphans
@@ -208,10 +208,7 @@ func (s *DocsOrphanDocs) Run(ctx context.Context, deps *runner.Deps) runner.Skil
 	// Add explicit exemptions
 	// READMEs in docs/ are entries, usually.
 	isExempt := func(p string) bool {
-		if strings.HasSuffix(strings.ToLower(p), "readme.md") {
-			return true
-		}
-		return false
+		return strings.HasSuffix(strings.ToLower(p), "readme.md")
 	}
 
 	for c := range candidates {

@@ -35,7 +35,7 @@ fn canonicalize_value(v: Value) -> Value {
 fn canonicalize_object(map: Map<String, Value>) -> Value {
     // Collect into a Vec to handle sorting without re-lookup
     let mut entries: Vec<(String, Value)> = map.into_iter().collect();
-    
+
     // Sort keys lexicographically.
     entries.sort_by(|a, b| a.0.cmp(&b.0));
 
@@ -55,7 +55,12 @@ pub fn validate_invariants(index: &XrayIndex) -> Result<()> {
             if window[0].path == window[1].path {
                 anyhow::bail!("Duplicate file path at index {}: {}", i, window[0].path);
             }
-            anyhow::bail!("Files not sorted at index {}: {} >= {}", i, window[0].path, window[1].path);
+            anyhow::bail!(
+                "Files not sorted at index {}: {} >= {}",
+                i,
+                window[0].path,
+                window[1].path
+            );
         }
     }
 
@@ -65,18 +70,31 @@ pub fn validate_invariants(index: &XrayIndex) -> Result<()> {
             if window[0] == window[1] {
                 anyhow::bail!("Duplicate module file at index {}: {}", i, window[0]);
             }
-            anyhow::bail!("Module files not sorted at index {}: {} >= {}", i, window[0], window[1]);
+            anyhow::bail!(
+                "Module files not sorted at index {}: {} >= {}",
+                i,
+                window[0],
+                window[1]
+            );
         }
     }
 
     // 3. Stats consistency
     if index.files.len() != index.stats.file_count {
-        anyhow::bail!("File count mismatch: files.len()={} vs stats.file_count={}", index.files.len(), index.stats.file_count);
+        anyhow::bail!(
+            "File count mismatch: files.len()={} vs stats.file_count={}",
+            index.files.len(),
+            index.stats.file_count
+        );
     }
-    
+
     let computed_size: u64 = index.files.iter().map(|f| f.size).sum();
     if computed_size != index.stats.total_size {
-        anyhow::bail!("Total size mismatch: computed={} vs stats.total_size={}", computed_size, index.stats.total_size);
+        anyhow::bail!(
+            "Total size mismatch: computed={} vs stats.total_size={}",
+            computed_size,
+            index.stats.total_size
+        );
     }
 
     Ok(())

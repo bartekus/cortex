@@ -11,7 +11,10 @@ pub struct ResolveEngine<F: Fs> {
 
 impl<F: Fs> ResolveEngine<F> {
     pub fn new(fs: F, workspace_roots: Vec<PathBuf>) -> Self {
-        Self { fs, workspace_roots }
+        Self {
+            fs,
+            workspace_roots,
+        }
     }
 
     pub fn resolve(&self, name: &str) -> Result<ResolveResponse> {

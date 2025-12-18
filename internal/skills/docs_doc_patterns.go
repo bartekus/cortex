@@ -22,8 +22,6 @@ func NewDocsDocPatterns() runner.Skill {
 
 func (s *DocsDocPatterns) ID() string { return s.id }
 
-var fileNameRegex = regexp.MustCompile(`^[a-z0-9\-_]+\.md$`)
-
 func (s *DocsDocPatterns) Run(ctx context.Context, deps *runner.Deps) runner.SkillResult {
 	// Scan docs/
 	opts := scanner.FilterOptions{

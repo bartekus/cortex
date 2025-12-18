@@ -1,18 +1,18 @@
-use crate::schema::XrayIndex;
 use crate::canonical::to_canonical_json;
-use sha2::{Digest, Sha256};
+use crate::schema::XrayIndex;
 use anyhow::Result;
+use sha2::{Digest, Sha256};
 
 /// Calculates the repository digest.
 ///
 /// The digest is: SHA-256( CanonicalJSON( Index( digest="" ) ) )
-/// 
+///
 /// 1. Clone the index.
 /// 2. Set digest to empty string.
 /// 3. Serialize to canonical JSON.
 /// 4. Hash it.
 pub fn calculate_digest(index: &XrayIndex) -> Result<String> {
-    // Enforce invariants before hashing. 
+    // Enforce invariants before hashing.
     // The digest MUST certify the validity of the structure.
     // We check invariants on the input index (except digest field which is ignored).
     // Note: checking unique paths, sortedness, etc.
@@ -31,7 +31,7 @@ pub fn calculate_digest(index: &XrayIndex) -> Result<String> {
     };
 
     // Sorting REMOVED. We rely on validate_invariants to ensure it's already sorted.
-    
+
     let bytes = to_canonical_json(&clone)?;
     let mut hasher = Sha256::new();
     hasher.update(&bytes);
