@@ -17,6 +17,20 @@ make build
 # Run the CLI
 ./bin/cortex --help
 ```
+./bin/cortex --help
+```
+
+## Verification
+
+To verify the installation matches the release artifact:
+
+1. Download the archive for your OS/Arch.
+2. Extract the archive.
+3. Run the binary:
+   ```bash
+   ./cortex --version
+   ```
+4. Verify the version matches the release tag.
 
 ## Contributing
 

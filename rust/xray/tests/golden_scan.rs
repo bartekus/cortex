@@ -25,9 +25,12 @@ fn test_determinism_empty_scan() {
     let fixture_dst = temp_dir.path().join("min_repo");
 
     // Copy fixture recursively
-    let copy_options = fs_extra::dir::CopyOptions::new().overwrite(true).copy_inside(true);
-    fs_extra::dir::copy(&fixture_src, temp_dir.path(), &copy_options).expect("Failed to copy fixture");
-    
+    let copy_options = fs_extra::dir::CopyOptions::new()
+        .overwrite(true)
+        .copy_inside(true);
+    fs_extra::dir::copy(&fixture_src, temp_dir.path(), &copy_options)
+        .expect("Failed to copy fixture");
+
     // Rename if necessary (copy_inside moves content of src into dst, so we might have temp_dir/min_repo)
     // Actually fs_extra::dir::copy with fixture_src being .../min_repo and destination temp_dir.path()
     // will create temp_dir.path()/min_repo.
@@ -35,7 +38,11 @@ fn test_determinism_empty_scan() {
     // Create fake .git config to satisfy requirements
     let git_dir = fixture_dst.join(".git");
     fs::create_dir_all(&git_dir).expect("Failed to create .git dir");
-    fs::write(git_dir.join("config"), "[core]\n\trepositoryformatversion = 0\n").expect("Failed to write .git/config");
+    fs::write(
+        git_dir.join("config"),
+        "[core]\n\trepositoryformatversion = 0\n",
+    )
+    .expect("Failed to write .git/config");
 
     // Clean outputs
     let _ = fs::remove_dir_all(&output_dir_1);

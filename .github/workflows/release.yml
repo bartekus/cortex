@@ -106,9 +106,9 @@ jobs:
           ./rust-dist/rust-binaries-linux_amd64/cortex-mcp --help
 
       - name: Run GoReleaser
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
-          # Consider pinning this later; v5 is fine for now.
+          # v6 defaults to GoReleaser v2
           version: latest
           args: release --clean
         env:
