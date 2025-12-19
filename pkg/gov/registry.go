@@ -9,8 +9,10 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type GovernanceState string
-type ImplementationState string
+type (
+	GovernanceState     string
+	ImplementationState string
+)
 
 const (
 	GovDraft      GovernanceState = "draft"
