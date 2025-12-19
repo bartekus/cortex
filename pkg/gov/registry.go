@@ -9,25 +9,33 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type FeatureStatus string
+type GovernanceState string
+type ImplementationState string
 
 const (
-	StatusDraft       FeatureStatus = "draft"
-	StatusReview      FeatureStatus = "review"
-	StatusApproved    FeatureStatus = "approved"
-	StatusImplemented FeatureStatus = "implemented"
-	StatusDeprecated  FeatureStatus = "deprecated"
+	GovDraft      GovernanceState = "draft"
+	GovReview     GovernanceState = "review"
+	GovApproved   GovernanceState = "approved"
+	GovDeprecated GovernanceState = "deprecated"
+)
+
+const (
+	ImplTodo       ImplementationState = "todo"
+	ImplWip        ImplementationState = "wip"
+	ImplDone       ImplementationState = "done"
+	ImplDeprecated ImplementationState = "deprecated"
 )
 
 type Feature struct {
-	ID        string        `yaml:"id"`
-	Title     string        `yaml:"title"`
-	Status    FeatureStatus `yaml:"status"`
-	Spec      string        `yaml:"spec"`
-	Owner     string        `yaml:"owner"`
-	Group     string        `yaml:"group"`
-	Tests     []string      `yaml:"tests"`
-	DependsOn []string      `yaml:"depends_on"`
+	ID             string              `yaml:"id"`
+	Title          string              `yaml:"title"`
+	Governance     GovernanceState     `yaml:"governance"`
+	Implementation ImplementationState `yaml:"implementation"`
+	Spec           string              `yaml:"spec"`
+	Owner          string              `yaml:"owner"`
+	Group          string              `yaml:"group"`
+	Tests          []string            `yaml:"tests"`
+	DependsOn      []string            `yaml:"depends_on"`
 }
 
 type Registry struct {
@@ -59,8 +67,11 @@ func (r *Registry) Validate() error {
 		if f.Title == "" {
 			return fmt.Errorf("feature %s missing title", f.ID)
 		}
-		if f.Status == "" {
-			return fmt.Errorf("feature %s missing status", f.ID)
+		if f.Governance == "" {
+			return fmt.Errorf("feature %s missing governance", f.ID)
+		}
+		if f.Implementation == "" {
+			return fmt.Errorf("feature %s missing implementation", f.ID)
 		}
 		if f.Spec == "" {
 			return fmt.Errorf("feature %s missing spec", f.ID)
@@ -72,12 +83,20 @@ func (r *Registry) Validate() error {
 			return fmt.Errorf("feature %s missing group", f.ID)
 		}
 
-		// Status enum
-		switch f.Status {
-		case StatusDraft, StatusReview, StatusApproved, StatusImplemented, StatusDeprecated:
+		// Governance enum
+		switch f.Governance {
+		case GovDraft, GovReview, GovApproved, GovDeprecated:
 			// valid
 		default:
-			return fmt.Errorf("feature %s has invalid status: %s", f.ID, f.Status)
+			return fmt.Errorf("feature %s has invalid governance: %s", f.ID, f.Governance)
+		}
+
+		// Implementation enum
+		switch f.Implementation {
+		case ImplTodo, ImplWip, ImplDone, ImplDeprecated:
+			// valid
+		default:
+			return fmt.Errorf("feature %s has invalid implementation: %s", f.ID, f.Implementation)
 		}
 
 		// Duplicate IDs

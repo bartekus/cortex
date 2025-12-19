@@ -183,9 +183,9 @@ func Analyze(opts Options) (Report, error) {
 			}
 		}
 		metas = append(metas, featureMeta{
-			ID:       id,
-			Status:   string(fs.Status),
-			SpecPath: specPath,
+			ID:             id,
+			Implementation: string(fs.Status),
+			SpecPath:       specPath,
 		})
 	}
 
@@ -193,12 +193,12 @@ func Analyze(opts Options) (Report, error) {
 }
 
 // featureMeta is an internal helper describing what we know about a feature
-// from spec/features.yaml. In production this is populated from the
-// existing feature parsing tooling. Tests construct it directly.
+// from spec/features.yaml. It captures the implementation lifecycle state
+// (todo/wip/done) and the canonical spec path. Tests construct it directly.
 type featureMeta struct {
-	ID       string
-	Status   string // "todo", "wip", "done"
-	SpecPath string
+	ID             string
+	Implementation string // "todo", "wip", "done"
+	SpecPath       string
 }
 
 // analyzeWithFeatures contains the actual deterministic analysis logic.
@@ -341,7 +341,7 @@ func analyzeWithFeatures(root string, metas []featureMeta) (Report, error) {
 		sort.Strings(fm.ImplFiles)
 		sort.Strings(fm.TestFiles)
 
-		switch m.Status {
+		switch m.Implementation {
 		case "todo":
 			switch {
 			case !specExists && len(fm.ImplFiles) == 0 && len(fm.TestFiles) == 0:
@@ -409,7 +409,7 @@ func analyzeWithFeatures(root string, metas []featureMeta) (Report, error) {
 			}
 
 		default:
-			// Unknown status - treat similar to todo.
+			// Unknown implementation state - treat similar to todo.
 			if !specExists && len(fm.ImplFiles) == 0 && len(fm.TestFiles) == 0 {
 				fm.Status = FeatureStatusUnmapped
 			} else {

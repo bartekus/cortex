@@ -83,7 +83,7 @@ features:
     title: "CLI Command: Status"
     governance: approved
     implementation: done
-    spec: "spec/cli/governance.md"
+    spec: "spec/cli/status.md"
     owner: bart
     group: cli
     tests: []

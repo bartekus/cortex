@@ -27,7 +27,7 @@ func NewGovValidateCommand() *cobra.Command {
 			if err := reg.Validate(); err != nil {
 				return fmt.Errorf("registry validation failed: %w", err)
 			}
-			fmt.Println("✓ Registry structure valid")
+			fmt.Println("✓ Registry structure valid (governance + implementation)")
 
 			// 2. Traceability Checks
 			if err := reg.ValidateTraceability(rootDir); err != nil {

@@ -65,19 +65,19 @@ func TestAnalyze_MappingBasicSemantics(t *testing.T) {
 	// Define the feature universe for this fixture.
 	features := []featureMeta{
 		// todo - no spec, no impl, no tests - allowed
-		{ID: "FEATURE_TODO", Status: "todo", SpecPath: "spec/feature_todo_missing.md"},
+		{ID: "FEATURE_TODO", Implementation: "todo", SpecPath: "spec/feature_todo_missing.md"},
 		// wip - spec + impl, no tests - allowed
-		{ID: "FEATURE_WIP_OK", Status: "wip", SpecPath: "spec/feature_wip_ok.md"},
+		{ID: "FEATURE_WIP_OK", Implementation: "wip", SpecPath: "spec/feature_wip_ok.md"},
 		// done - spec + impl + test - fully OK
-		{ID: "FEATURE_DONE_OK", Status: "done", SpecPath: "spec/feature_done_ok.md"},
+		{ID: "FEATURE_DONE_OK", Implementation: "done", SpecPath: "spec/feature_done_ok.md"},
 		// done - spec path points at a non-existent file - MISSING_SPEC
-		{ID: "FEATURE_NOSPEC", Status: "done", SpecPath: "spec/missing_spec.md"},
+		{ID: "FEATURE_NOSPEC", Implementation: "done", SpecPath: "spec/missing_spec.md"},
 		// done - spec exists, no impl, no tests - MISSING_IMPL
-		{ID: "FEATURE_IMPL_MISSING", Status: "done", SpecPath: "spec/feature_impl_missing.md"},
+		{ID: "FEATURE_IMPL_MISSING", Implementation: "done", SpecPath: "spec/feature_impl_missing.md"},
 		// done - spec exists, impl exists, no tests - MISSING_TESTS
-		{ID: "FEATURE_TEST_MISSING", Status: "done", SpecPath: "spec/feature_test_missing.md"},
+		{ID: "FEATURE_TEST_MISSING", Implementation: "done", SpecPath: "spec/feature_test_missing.md"},
 		// done - spec exists, impl uses wrong Spec header - SPEC_PATH_MISMATCH
-		{ID: "FEATURE_MISMATCH", Status: "done", SpecPath: "spec/feature_mismatch.md"},
+		{ID: "FEATURE_MISMATCH", Implementation: "done", SpecPath: "spec/feature_mismatch.md"},
 	}
 
 	report, err := analyzeWithFeatures(root, features)
