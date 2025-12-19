@@ -56,3 +56,6 @@ jobs:
 
       - name: Build
         run: make build
+
+      - name: Governance
+        run: make gov

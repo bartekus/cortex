@@ -1,14 +1,19 @@
 Usage:
-  cortex [command]
-
+cortex [command]
 Available Commands:
-  context     Context management tools
-  features    Feature registry management
-  gov         Governance utilities
-  run         Execute defined tasks
-  status      Check repository status
-  version     Print the version number of Cortex
-
+commit      Generate commit health report
+commit      Generate commit discipline suggestions
+completion  Generate the autocompletion script for the specified shell
+context     AI context pipeline commands
+feature     Generate feature traceability report
+features    Manage feature dependency graphs and documentation
+gov         Governance checks for Cortex
+help        Help about any command
+run         Orchestrate Cortex skills and governance checks
+status      Show Cortex project status and roadmap analysis
+version     Print the version number of Cortex
+xray        Run XRAY scan
 Flags:
-  -h, --help      help for cortex
-  -v, --verbose   enable verbose output
+-h, --help      help for cortex
+-v, --verbose   enable verbose output
+Use "cortex [command] --help" for more information about a command.

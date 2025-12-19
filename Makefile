@@ -15,6 +15,12 @@ all: lint test build
 
 # --- Top-level targets (canonical) ---
 
+gov: build
+	@echo "Running governance checks..."
+	./bin/cortex gov validate
+	./bin/cortex gov drift help
+	./bin/cortex gov drift xray
+
 build: go-build rust-build
 
 test: go-test rust-test
