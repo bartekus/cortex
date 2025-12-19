@@ -13,8 +13,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Package featuretrace defines the data model for feature traceability reports.
 //
-// Feature: GOV_CORE
-// Docs: docs/design/commit-reports-go-types.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 package featuretrace
 
 // Report represents the complete feature traceability report.

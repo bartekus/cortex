@@ -19,8 +19,8 @@ import (
 	"testing"
 )
 
-// Feature: GOV_CORE
-// Spec: spec/governance/GOV_CORE.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 
 func TestExtractFrontmatter_ValidFrontmatter(t *testing.T) {
 	content := `---
@@ -234,7 +234,7 @@ func TestExpectedFeatureIDFromPath(t *testing.T) {
 		path     string
 		expected string
 	}{
-		{"spec/governance/GOV_CORE.md", "GOV_CORE"},
+		{"spec/governance/CLI_COMMAND_GOV.md", "CLI_COMMAND_GOV"},
 		{"spec/commands/build.md", "build"},
 		{"FEATURE.md", "FEATURE"},
 		{"path/to/SPEC.md", "SPEC"},

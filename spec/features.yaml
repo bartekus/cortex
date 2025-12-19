@@ -35,6 +35,70 @@ features:
     depends_on:
       - CORE_REPO_CONTRACT
 
+  # --- CLI Commands ---
+  - id: CLI_COMMAND_RUN
+    title: "CLI Command: Run"
+    status: approved
+    spec: "spec/cli/run.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_CONTEXT
+    title: "CLI Command: Context"
+    status: approved
+    spec: "spec/cli/context.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_FEATURES
+    title: "CLI Command: Features"
+    status: approved
+    spec: "spec/cli/features.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_GOV
+    title: "CLI Command: Gov"
+    status: approved
+    spec: "spec/cli/gov.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_STATUS
+    title: "CLI Command: Status"
+    status: approved
+    spec: "spec/cli/status.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_COMMIT
+    title: "CLI Command: Commit"
+    status: approved
+    spec: "spec/cli/commit.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
+  - id: CLI_COMMAND_FEATURE
+    title: "CLI Command: Feature"
+    status: approved
+    spec: "spec/cli/feature.md"
+    owner: bart
+    group: cli
+    tests: []
+    depends_on: [CLI_CONTRACT]
+
   # --- XRAY Engine ---
   - id: XRAY_INDEX_FORMAT
     title: "XRAY Index Format"
@@ -56,6 +120,15 @@ features:
     depends_on:
       - XRAY_INDEX_FORMAT
 
+  - id: XRAY_CLI
+    title: "XRAY CLI"
+    status: approved
+    spec: "spec/xray/cli.md"
+    owner: bart
+    group: xray
+    tests: []
+    depends_on: [XRAY_SCAN_POLICY]
+
   # --- MCP Protocol ---
   - id: MCP_ROUTER_CONTRACT
     title: "MCP Router Contract"
@@ -66,3 +139,31 @@ features:
     tests: []
     depends_on:
       - CORE_REPO_CONTRACT
+
+  - id: MCP_TOOLS
+    title: "MCP Tools"
+    status: approved
+    spec: "spec/mcp/tools.md"
+    owner: bart
+    group: mcp
+    tests: []
+    depends_on: [MCP_ROUTER_CONTRACT]
+
+  # --- Skills & Reports ---
+  - id: SKILLS_REGISTRY
+    title: "Skills Registry"
+    status: approved
+    spec: "spec/skills/registry.md"
+    owner: bart
+    group: skills
+    tests: []
+    depends_on: [CLI_COMMAND_RUN]
+
+  - id: REPORTS_CORE
+    title: "Reports: Core"
+    status: approved
+    spec: "spec/reports/core.md"
+    owner: bart
+    group: reports
+    tests: []
+    depends_on: [CLI_COMMAND_COMMIT]

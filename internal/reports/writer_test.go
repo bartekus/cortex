@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: REPORTS_CORE
+// Spec: spec/reports/core.md
 package reports
 
 import (

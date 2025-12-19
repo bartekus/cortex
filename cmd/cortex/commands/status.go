@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_STATUS_ROADMAP
-// Spec: spec/commands/status-roadmap.md
+// Feature: CLI_COMMAND_STATUS
+// Spec: spec/cli/status.md
 
 package commands
 
@@ -52,7 +52,7 @@ func newStatusRoadmapCommand() *cobra.Command {
 		Long: `Generate a deterministic phase-level feature completion analysis document
 based on spec/features.yaml and write it to docs/engine/status/feature-completion-analysis.md.
 
-This command is part of GOV_STATUS_ROADMAP and is used by governance tooling.`,
+This command is part of CLI_COMMAND_STATUS and is used by governance tooling.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			featuresPath, err := cmd.Flags().GetString("features")
 			if err != nil {

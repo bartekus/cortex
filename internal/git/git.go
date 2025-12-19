@@ -13,8 +13,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Package git provides a deterministic git adapter for commit history retrieval.
 //
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: XRAY_INDEX_FORMAT
+// Spec: spec/xray/index-format.md
 package git
 
 import (

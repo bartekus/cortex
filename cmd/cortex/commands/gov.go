@@ -24,8 +24,8 @@ import (
 	"github.com/bartekus/cortex/internal/governance/mapping"
 )
 
-// Feature: GOV_CORE
-// Spec: spec/governance/GOV_CORE.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 
 // NewGovCommand returns the `cortex gov` command.
 func NewGovCommand() *cobra.Command {

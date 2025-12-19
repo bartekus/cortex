@@ -24,8 +24,8 @@ import (
 	"github.com/bartekus/cortex/internal/reports/featuretrace"
 )
 
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: CLI_COMMAND_FEATURE
+// Spec: spec/cli/feature.md
 
 // NewFeatureTraceabilityCommand returns the `cortex feature traceability` command.
 func NewFeatureTraceabilityCommand() *cobra.Command {

@@ -11,9 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Spec: spec/providers/frontend/generic.md
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: REPORTS_CORE
+// Spec: spec/reports/core.md
 package featuretrace
 
 import (
@@ -41,7 +40,7 @@ func TestScanFeaturePresence_DeterministicOrdering(t *testing.T) {
 
 	// Create spec file with Feature header
 	specContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 # Deploy Command
 `
@@ -52,7 +51,7 @@ func TestScanFeaturePresence_DeterministicOrdering(t *testing.T) {
 
 	// Create implementation file
 	implContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 package core
 `
@@ -63,7 +62,7 @@ package core
 
 	// Create test file
 	testContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 package core
 `
@@ -74,7 +73,7 @@ package core
 
 	// Create another feature to test sorting
 	anotherSpecContent := `// Feature: CLI_PLAN
-// Spec: spec/commands/plan.md
+// SpecRef: spec/commands/plan.md
 
 # Plan Command
 `
@@ -161,7 +160,7 @@ func TestExtractFeatureIDFromFile(t *testing.T) {
 	}{
 		{
 			name:     "valid feature header",
-			content:  "// Feature: CLI_DEPLOY\n// Spec: spec/commands/deploy.md\n",
+			content:  "// Feature: CLI_DEPLOY\n// SpecRef: spec/commands/deploy.md\n",
 			expected: "CLI_DEPLOY",
 		},
 		{

@@ -13,8 +13,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 package commands
 
-// Feature: CLI_COMMIT_SUGGEST
-// Spec: spec/commands/commit-suggest.md
+// Feature: CLI_COMMAND_COMMIT
+// Spec: spec/cli/commit.md
 
 import (
 	"bytes"

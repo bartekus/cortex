@@ -13,10 +13,10 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Package features contains governance tooling for feature-level analysis.
 //
-// Feature: GOV_CORE
-// Spec: spec/governance/GOV_CORE.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 //
-// This package implements Phase 4 of GOV_CORE: multi-feature cross-validation
+// This package implements Phase 4 of CLI_COMMAND_GOV: multi-feature cross-validation
 // and enforcement of the Feature Mapping Invariant across specs, code, and tests.
 package features
 

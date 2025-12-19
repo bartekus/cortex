@@ -11,9 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Spec: spec/providers/frontend/generic.md
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: CLI_COMMAND_FEATURE
+// Spec: spec/cli/feature.md
 package commands
 
 import (
@@ -53,7 +52,7 @@ func TestRunFeatureTraceability_GeneratesReport(t *testing.T) {
 	}
 
 	specContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 # Deploy Command
 `
@@ -68,7 +67,7 @@ func TestRunFeatureTraceability_GeneratesReport(t *testing.T) {
 	}
 
 	implContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 package core
 `
@@ -183,7 +182,7 @@ func TestRunFeatureTraceability_GoldenFile(t *testing.T) {
 	}
 
 	specContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 # Deploy Command
 `
@@ -198,7 +197,7 @@ func TestRunFeatureTraceability_GoldenFile(t *testing.T) {
 	}
 
 	implContent := `// Feature: CLI_DEPLOY
-// Spec: spec/commands/deploy.md
+// SpecRef: spec/commands/deploy.md
 
 package core
 `

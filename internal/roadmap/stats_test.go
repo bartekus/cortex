@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_STATUS_ROADMAP
-// Spec: spec/commands/status-roadmap.md
+// Feature: CLI_COMMAND_STATUS
+// Spec: spec/cli/status.md
 
 package roadmap
 
@@ -195,10 +195,10 @@ func TestIdentifyBlockers_WithDependencies(t *testing.T) {
 	}
 
 	// Features with done dependencies should not be blockers
-	// GOV_STATUS_ROADMAP depends on GOV_CORE (done), so should not be blocked
+	// CLI_COMMAND_STATUS depends on CLI_COMMAND_GOV (done), so should not be blocked
 	for _, blocker := range blockers {
-		if blocker.FeatureID == "GOV_STATUS_ROADMAP" {
-			t.Error("GOV_STATUS_ROADMAP should not be blocked (dependency is done)")
+		if blocker.FeatureID == "CLI_COMMAND_STATUS" {
+			t.Error("CLI_COMMAND_STATUS should not be blocked (dependency is done)")
 		}
 	}
 }

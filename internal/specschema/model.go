@@ -54,7 +54,7 @@ type Spec struct {
 }
 
 // ExpectedFeatureIDFromPath extracts the expected feature ID from a spec file path.
-// For example, "spec/governance/GOV_CORE.md" -> "GOV_CORE".
+// For example, "spec/governance/CLI_COMMAND_GOV.md" -> "CLI_COMMAND_GOV".
 func ExpectedFeatureIDFromPath(path string) string {
 	base := filepath.Base(path)
 	ext := filepath.Ext(base)

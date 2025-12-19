@@ -24,8 +24,8 @@ import (
 	"github.com/bartekus/cortex/internal/specschema"
 )
 
-// Feature: GOV_CORE
-// Spec: spec/governance/GOV_CORE.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 
 func TestGenerateFeatureOverview_CreatesFile(t *testing.T) {
 	tmpDir := t.TempDir()

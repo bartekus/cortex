@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_CORE
-// Spec: spec/governance/GOV_CORE.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 package git
 
 import (

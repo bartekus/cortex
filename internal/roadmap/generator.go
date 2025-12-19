@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_STATUS_ROADMAP
-// Spec: spec/commands/status-roadmap.md
+// Feature: CLI_COMMAND_STATUS
+// Spec: spec/cli/status.md
 
 // Package roadmap provides tools for analyzing feature completion and generating
 // roadmap status reports from spec/features.yaml.

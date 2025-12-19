@@ -11,8 +11,8 @@ import (
 	"github.com/bartekus/cortex/cmd/cortex/commands"
 )
 
-// Feature: CORTEX_CLI
-// Spec: ai.agent/cortex/README.md (Phase 2)
+// Feature: CLI_CONTRACT
+// Spec: spec/cli/contract.md
 
 func main() {
 	if err := NewRootCommand().Execute(); err != nil {

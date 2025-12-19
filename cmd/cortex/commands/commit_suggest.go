@@ -28,8 +28,8 @@ import (
 	"github.com/bartekus/cortex/internal/reports/suggestions"
 )
 
-// Feature: CLI_COMMIT_SUGGEST
-// Spec: spec/commands/commit-suggest.md
+// Feature: CLI_COMMAND_COMMIT
+// Spec: spec/cli/commit.md
 
 // NewCommitSuggestCommand returns the `cortex commit suggest` command.
 func NewCommitSuggestCommand() *cobra.Command {

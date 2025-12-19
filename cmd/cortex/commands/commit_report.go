@@ -29,8 +29,8 @@ import (
 	"github.com/bartekus/cortex/internal/reports/commithealth"
 )
 
-// Feature: PROVIDER_FRONTEND_GENERIC
-// Docs: docs/context-handoff/COMMIT_DISCIPLINE_PHASE3C.md
+// Feature: CLI_COMMAND_COMMIT
+// Spec: spec/cli/commit.md
 
 var newHistorySource = git.NewHistorySource
 

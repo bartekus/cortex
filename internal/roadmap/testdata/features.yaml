@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 #
-# Test data for GOV_STATUS_ROADMAP feature tests
+# Test data for CLI_COMMAND_STATUS feature tests
 #
 features:
   # Architecture & Documentation
@@ -114,19 +114,19 @@ features:
     tests: []
 
   # Governance
-  - id: GOV_CORE
+  - id: CLI_COMMAND_GOV
     title: "Governance core"
     status: done
-    spec: "governance/GOV_CORE.md"
+    spec: "governance/CLI_COMMAND_GOV.md"
     owner: bart
     tests:
       - "internal/governance/mapping/mapping_test.go"
 
-  - id: GOV_STATUS_ROADMAP
+  - id: CLI_COMMAND_STATUS
     title: "Status roadmap command"
     status: todo
     spec: "commands/status-roadmap.md"
     owner: bart
     depends_on:
-      - GOV_CORE
+      - CLI_COMMAND_GOV
     tests: []

@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_CORE
-// Docs: docs/design/commit-reports-go-types.md
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
 package commithealth
 
 import (

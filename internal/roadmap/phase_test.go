@@ -11,8 +11,8 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Feature: GOV_STATUS_ROADMAP
-// Spec: spec/commands/status-roadmap.md
+// Feature: CLI_COMMAND_STATUS
+// Spec: spec/cli/status.md
 
 package roadmap
 
@@ -83,8 +83,8 @@ func TestDetectPhases_MapsFeaturesToPhases(t *testing.T) {
 		{"CLI_DEPLOY", "Phase 2: Core Orchestration"},
 		{"CLI_DEV", "Phase 3: Local Development"},
 		{"DEV_HOSTS", "Phase 3: Local Development"},
-		{"GOV_CORE", "Governance"},
-		{"GOV_STATUS_ROADMAP", "Governance"},
+		{"CLI_COMMAND_GOV", "Governance"},
+		{"CLI_COMMAND_STATUS", "Governance"},
 	}
 
 	for _, tt := range tests {
