@@ -25,7 +25,7 @@ The `status` command provides high-level repository status and roadmap analysis.
 
 ## Flags
 - `--features <path>`: Path to `features.yaml` (default: `spec/features.yaml`).
-- `--output <path>`: Output path for markdown report (default: `docs/engine/status/feature-completion-analysis.md`).
+- `--output <path>`: Output path for markdown report (default: `docs/inventory/feature-completion-analysis.md`).
 
 ## Behavior
 - **Roadmap**: Analyzes feature status (approved, draft, etc.) and groups them by phases to generate a completion report.

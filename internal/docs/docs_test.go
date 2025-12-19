@@ -30,7 +30,7 @@ import (
 func TestGenerateFeatureOverview_CreatesFile(t *testing.T) {
 	tmpDir := t.TempDir()
 	featuresPath := filepath.Join(tmpDir, "features.yaml")
-	outPath := filepath.Join(tmpDir, "OVERVIEW.md")
+	outPath := filepath.Join(tmpDir, "features-overview.md")
 
 	// Create minimal features.yaml
 	content := `features:
@@ -79,7 +79,7 @@ func TestGenerateFeatureOverview_WithSpecFrontmatter(t *testing.T) {
 	if err := os.MkdirAll(specDir, 0o750); err != nil { //nolint:gosec // G301: test directory
 		t.Fatalf("failed to create spec dir: %v", err)
 	}
-	outPath := filepath.Join(tmpDir, "OVERVIEW.md")
+	outPath := filepath.Join(tmpDir, "features-overview.md")
 
 	// Create features.yaml
 	featuresContent := `features:
@@ -205,7 +205,10 @@ func TestGenerateMarkdown_IncludesAllSections(t *testing.T) {
 	if !strings.Contains(markdown, "## Dependency Graph") {
 		t.Error("expected dependency graph section")
 	}
-	if !strings.Contains(markdown, "## Status Summary") {
+	if !strings.Contains(markdown, "## Governance Summary") {
+		t.Error("expected status summary section")
+	}
+	if !strings.Contains(markdown, "## Implementation Summary") {
 		t.Error("expected status summary section")
 	}
 	if !strings.Contains(markdown, "FEATURE1") {
@@ -221,7 +224,7 @@ func TestGenerateFeatureOverview_MissingFeaturesFile(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	nonExistentPath := filepath.Join(tmpDir, "does-not-exist.yaml")
-	outPath := filepath.Join(tmpDir, "OVERVIEW.md")
+	outPath := filepath.Join(tmpDir, "features-overview.md")
 
 	err := GenerateFeatureOverview(nonExistentPath, tmpDir, outPath)
 	if err == nil {
@@ -238,7 +241,7 @@ func TestGenerateFeatureOverview_InvalidYAML(t *testing.T) {
 
 	tmpDir := t.TempDir()
 	featuresPath := filepath.Join(tmpDir, "features.yaml")
-	outPath := filepath.Join(tmpDir, "OVERVIEW.md")
+	outPath := filepath.Join(tmpDir, "features-overview.md")
 
 	// Create invalid YAML
 	content := `features:
