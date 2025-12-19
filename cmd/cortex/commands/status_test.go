@@ -38,7 +38,8 @@ func TestStatusRoadmapCommand_ExecutesSuccessfully(t *testing.T) {
   # Phase 0: Foundation
   - id: TEST_FEATURE
     title: "Test feature"
-    status: done
+    governance: approved
+    implementation: done
     spec: "test.md"
     owner: bart
     tests: []
@@ -159,7 +160,8 @@ func TestStatusRoadmapCommand_HandlesInvalidYAML(t *testing.T) {
 
 	invalidYAML := `features:
   - id: TEST
-    status: invalid
+    governance: approved
+    implementation: invalid
     unclosed: [
 `
 
@@ -216,7 +218,8 @@ func TestStatusRoadmapCommand_CreatesOutputDirectory(t *testing.T) {
   # Phase 0: Foundation
   - id: TEST_FEATURE
     title: "Test feature"
-    status: done
+    governance: approved
+    implementation: done
     spec: "test.md"
     owner: bart
     tests: []
@@ -283,7 +286,8 @@ func TestStatusRoadmapCommand_OverwritesExistingFile(t *testing.T) {
   # Phase 0: Foundation
   - id: TEST_FEATURE
     title: "Test feature"
-    status: done
+    governance: approved
+    implementation: done
     spec: "test.md"
     owner: bart
     tests: []

@@ -36,7 +36,8 @@ func TestGenerateFeatureOverview_CreatesFile(t *testing.T) {
 	content := `features:
   - id: FEATURE1
     title: "Feature 1"
-    status: done
+    governance: approved
+    implementation: done
     spec: "test/feature1.md"
     owner: test
     tests: []
@@ -84,7 +85,8 @@ func TestGenerateFeatureOverview_WithSpecFrontmatter(t *testing.T) {
 	featuresContent := `features:
   - id: FEATURE1
     title: "Feature 1"
-    status: done
+    governance: approved
+    implementation: done
     spec: "test/feature1.md"
     owner: test
     tests: []
