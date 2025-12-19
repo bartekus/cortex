@@ -65,7 +65,7 @@ func ValidateSpecIntegrity(featuresPath, specRoot string) error {
 			if os.IsNotExist(err) {
 				// Skip missing spec files for todo features (they're planned but not yet implemented)
 				// Also skip for done features that reference docs/adr/ files (ADRs are in a different location)
-				if node.Status == "todo" || strings.Contains(node.Spec, "adr/") {
+				if node.Implementation == "todo" || strings.Contains(node.Spec, "adr/") {
 					continue
 				}
 				errors = append(errors, fmt.Sprintf("feature %q references spec file %q that does not exist", id, node.Spec))

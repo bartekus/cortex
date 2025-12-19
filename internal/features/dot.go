@@ -34,11 +34,19 @@ func ToDOT(g *Graph) string {
 	}
 	sort.Strings(nodeIDs)
 
-	// Add nodes with status-based colors
+	// Add nodes with implementation-based colors and a label that includes both implementation + governance
 	for _, id := range nodeIDs {
 		node := g.Nodes[id]
-		color := getStatusColor(node.Status)
-		label := fmt.Sprintf("%s\\n[%s]", id, node.Status)
+		color := getStatusColor(node.Implementation)
+		gov := node.Governance
+		if gov == "" {
+			gov = "-"
+		}
+		impl := node.Implementation
+		if impl == "" {
+			impl = "-"
+		}
+		label := fmt.Sprintf("%s\\n[impl=%s]\\n[gov=%s]", id, impl, gov)
 		sb.WriteString(fmt.Sprintf("  %q [label=%q fillcolor=%q style=filled];\n",
 			id, label, color))
 	}

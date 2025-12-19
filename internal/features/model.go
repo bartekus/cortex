@@ -15,15 +15,16 @@ package features
 
 // FeatureNode represents a feature from features.yaml.
 type FeatureNode struct {
-	ID          string   `yaml:"id"`
-	Title       string   `yaml:"title"`
-	Status      string   `yaml:"status"`
-	Spec        string   `yaml:"spec"`
-	Owner       string   `yaml:"owner"`
-	Tests       []string `yaml:"tests"`
-	DependsOn   []string `yaml:"depends_on"`
-	Domain      string   `yaml:"domain"`
-	Description string   `yaml:"description"`
+	ID             string   `yaml:"id"`
+	Title          string   `yaml:"title"`
+	Governance     string   `yaml:"governance"`
+	Implementation string   `yaml:"implementation"`
+	Spec           string   `yaml:"spec"`
+	Owner          string   `yaml:"owner"`
+	Tests          []string `yaml:"tests"`
+	DependsOn      []string `yaml:"depends_on"`
+	Domain         string   `yaml:"domain"`
+	Description    string   `yaml:"description"`
 }
 
 // YAML represents the root structure of features.yaml.

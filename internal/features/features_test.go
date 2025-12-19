@@ -35,9 +35,9 @@ func TestNewGraph(t *testing.T) {
 func TestGraph_AddNode(t *testing.T) {
 	g := NewGraph()
 	node := &FeatureNode{
-		ID:     "FEATURE1",
-		Title:  "Test Feature",
-		Status: "done",
+		ID:             "FEATURE1",
+		Title:          "Test Feature",
+		Implementation: "done",
 	}
 
 	g.AddNode(node)
@@ -270,9 +270,9 @@ func TestImpact_UnknownFeature(t *testing.T) {
 
 func TestToDOT_GeneratesValidDOT(t *testing.T) {
 	g := NewGraph()
-	g.AddNode(&FeatureNode{ID: "FEATURE1", Status: "done"})
-	g.AddNode(&FeatureNode{ID: "FEATURE2", Status: "wip"})
-	g.AddNode(&FeatureNode{ID: "FEATURE3", Status: "todo"})
+	g.AddNode(&FeatureNode{ID: "FEATURE1", Implementation: "done"})
+	g.AddNode(&FeatureNode{ID: "FEATURE2", Implementation: "wip"})
+	g.AddNode(&FeatureNode{ID: "FEATURE3", Implementation: "todo"})
 
 	g.AddEdge("FEATURE2", "FEATURE1")
 	g.AddEdge("FEATURE3", "FEATURE2")

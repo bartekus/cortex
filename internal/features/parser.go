@@ -90,7 +90,7 @@ func LoadFeaturesYAML(rootDir, relPath string) (map[string]*FeatureSpec, error) 
 
 		result[feature.ID] = &FeatureSpec{
 			ID:     feature.ID,
-			Status: FeatureStatus(feature.Status),
+			Status: FeatureStatus(feature.Implementation),
 			Spec:   specPath,
 		}
 	}

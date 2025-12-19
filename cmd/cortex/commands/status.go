@@ -29,7 +29,7 @@ import (
 
 const (
 	defaultFeaturesPath = "spec/features.yaml"
-	defaultOutputPath   = "docs/engine/status/feature-completion-analysis.md"
+	defaultOutputPath   = "docs/inventory/feature-completion-analysis.md"
 )
 
 // NewStatusCommand returns the `cortex status` command with subcommands
@@ -50,7 +50,7 @@ func newStatusRoadmapCommand() *cobra.Command {
 		Use:   "roadmap",
 		Short: "Generate phase-level feature completion analysis from spec/features.yaml",
 		Long: `Generate a deterministic phase-level feature completion analysis document
-based on spec/features.yaml and write it to docs/engine/status/feature-completion-analysis.md.
+based on spec/features.yaml and write it to docs/inventory/feature-completion-analysis.md.
 
 This command is part of CLI_COMMAND_STATUS and is used by governance tooling.`,
 		RunE: func(cmd *cobra.Command, args []string) error {

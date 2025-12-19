@@ -6,7 +6,8 @@ features:
   # --- Core System ---
   - id: CORE_REPO_CONTRACT
     title: "Repository System Contract"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/system/contract.md"
     owner: bart
     group: core
@@ -16,7 +17,8 @@ features:
   # --- Release & Distribution ---
   - id: REL_ARTIFACT_LAYOUT
     title: "Release Artifact Layout"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/release/contract.md"
     owner: bart
     group: release
@@ -27,7 +29,8 @@ features:
   # --- CLI Interface ---
   - id: CLI_CONTRACT
     title: "CLI Command Interface"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/contract.md"
     owner: bart
     group: cli
@@ -38,7 +41,8 @@ features:
   # --- CLI Commands ---
   - id: CLI_COMMAND_RUN
     title: "CLI Command: Run"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/run.md"
     owner: bart
     group: cli
@@ -47,7 +51,8 @@ features:
 
   - id: CLI_COMMAND_CONTEXT
     title: "CLI Command: Context"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/context.md"
     owner: bart
     group: cli
@@ -56,7 +61,8 @@ features:
 
   - id: CLI_COMMAND_FEATURES
     title: "CLI Command: Features"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/features.md"
     owner: bart
     group: cli
@@ -65,7 +71,8 @@ features:
 
   - id: CLI_COMMAND_GOV
     title: "CLI Command: Gov"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/gov.md"
     owner: bart
     group: cli
@@ -74,8 +81,9 @@ features:
 
   - id: CLI_COMMAND_STATUS
     title: "CLI Command: Status"
-    status: approved
-    spec: "spec/cli/status.md"
+    governance: approved
+    implementation: done
+    spec: "spec/cli/governance.md"
     owner: bart
     group: cli
     tests: []
@@ -83,7 +91,8 @@ features:
 
   - id: CLI_COMMAND_COMMIT
     title: "CLI Command: Commit"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/commit.md"
     owner: bart
     group: cli
@@ -92,7 +101,8 @@ features:
 
   - id: CLI_COMMAND_FEATURE
     title: "CLI Command: Feature"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/cli/feature.md"
     owner: bart
     group: cli
@@ -102,7 +112,8 @@ features:
   # --- XRAY Engine ---
   - id: XRAY_INDEX_FORMAT
     title: "XRAY Index Format"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/xray/index-format.md"
     owner: bart
     group: xray
@@ -112,7 +123,8 @@ features:
 
   - id: XRAY_SCAN_POLICY
     title: "XRAY Scan Policy"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/xray/scan-policy.md"
     owner: bart
     group: xray
@@ -122,7 +134,8 @@ features:
 
   - id: XRAY_CLI
     title: "XRAY CLI"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/xray/cli.md"
     owner: bart
     group: xray
@@ -132,7 +145,8 @@ features:
   # --- MCP Protocol ---
   - id: MCP_ROUTER_CONTRACT
     title: "MCP Router Contract"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/mcp/contract.md"
     owner: bart
     group: mcp
@@ -142,7 +156,8 @@ features:
 
   - id: MCP_TOOLS
     title: "MCP Tools"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/mcp/tools.md"
     owner: bart
     group: mcp
@@ -152,7 +167,8 @@ features:
   # --- Skills & Reports ---
   - id: SKILLS_REGISTRY
     title: "Skills Registry"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/skills/registry.md"
     owner: bart
     group: skills
@@ -161,7 +177,8 @@ features:
 
   - id: REPORTS_CORE
     title: "Reports: Core"
-    status: approved
+    governance: approved
+    implementation: done
     spec: "spec/reports/core.md"
     owner: bart
     group: reports
