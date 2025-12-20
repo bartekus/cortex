@@ -91,8 +91,8 @@ func NewContextXrayCommand() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("finding repo root: %w", err)
 				}
-				//slug := filepath.Base(repoRoot)
-				//out = filepath.Join(repoRoot, ".cortex", slug, "data")
+				// slug := filepath.Base(repoRoot)
+				// out = filepath.Join(repoRoot, ".cortex", slug, "data")
 				out = filepath.Join(repoRoot, ".cortex", "data")
 			}
 
@@ -144,8 +144,8 @@ func runContextBuild(cmd *cobra.Command, _ []string) error {
 	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] building AI context...\n")
 
 	// 1. Run XRAY scan (Rust)
-	//slug := filepath.Base(repoRoot)
-	//outputDir := filepath.Join(repoRoot, ".cortex", slug, "data")
+	// slug := filepath.Base(repoRoot)
+	// outputDir := filepath.Join(repoRoot, ".cortex", slug, "data")
 	outputDir := filepath.Join(repoRoot, ".cortex", "data")
 
 	// Rust CLI order: scan <target> --output <dir>
