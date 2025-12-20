@@ -60,12 +60,15 @@ func ValidateSpec(spec *Spec) error {
 
 	// Validate status enum
 	validStatuses := map[string]bool{
-		"todo": true,
-		"wip":  true,
-		"done": true,
+		"todo":       true,
+		"wip":        true,
+		"done":       true,
+		"approved":   true,
+		"deprecated": true,
+		"removed":    true,
 	}
 	if !validStatuses[fm.Status] {
-		return fmt.Errorf("invalid status: %s (must be one of: todo, wip, done)", fm.Status)
+		return fmt.Errorf("invalid status: %s (must be one of: todo, wip, done, approved, deprecated, removed)", fm.Status)
 	}
 
 	// Note: Feature ID validation is handled by ValidateSpecIntegrity, which checks

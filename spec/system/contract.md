@@ -2,7 +2,7 @@
 feature: CORE_REPO_CONTRACT
 version: v1
 status: approved
-domain: core
+domain: system
 inputs:
   commands:
     - make build
