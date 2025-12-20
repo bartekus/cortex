@@ -13,7 +13,10 @@ ADDLICENSE_VERSION := v1.1.1
 
 all: fmt-check lint test build
 
-repo: context docs reports gov
+repo: clean context docs reports gov
+
+clean:
+	@rm -rf .cortex docs/__generated__
 
 docs: build
 	@echo " "
