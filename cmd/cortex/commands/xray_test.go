@@ -18,13 +18,13 @@ func TestIntegrationXrayScan(t *testing.T) {
 	}
 
 	// Locate binary (must be built)
-	bin := filepath.Join(root, "ai.agent/rust/xray/target/debug/xray")
+	bin := filepath.Join(root, "bin/xray")
 	if _, err := os.Stat(bin); os.IsNotExist(err) {
 		t.Skipf("Skipping integration test: xray binary not found at %s. Build it to run this test.", bin)
 	}
 
 	// Use fixture as target
-	fixturePath := filepath.Join(root, "ai.agent/rust/xray/tests/fixtures/min_repo")
+	fixturePath := filepath.Join(root, "rust/xray/tests/fixtures/min_repo")
 	if _, err := os.Stat(fixturePath); os.IsNotExist(err) {
 		t.Fatalf("Fixture not found at %s", fixturePath)
 	}
@@ -76,13 +76,13 @@ func TestIntegrationContextBuild(t *testing.T) {
 	if err != nil {
 		t.Fatalf("Failed to find repo root: %v", err)
 	}
-	bin := filepath.Join(repoRoot, "ai.agent/rust/xray/target/debug/xray")
+	bin := filepath.Join(repoRoot, "bin/xray")
 	if _, err := os.Stat(bin); os.IsNotExist(err) {
 		t.Skipf("Skipping integration test: xray binary not found at %s. Build it to run this test.", bin)
 	}
 
 	// 3. Populate Temp Repo with Fixture Data (min_repo)
-	fixturePath := filepath.Join(repoRoot, "ai.agent/rust/xray/tests/fixtures/min_repo")
+	fixturePath := filepath.Join(repoRoot, "rust/xray/tests/fixtures/min_repo")
 	// Simple copy of relevant files to temp root
 	// We need .git or markers? projectroot.Find checks for .git, go.mod, etc.
 	// XRAY only cares if target is a dir. But 'context build' calls projectroot.Find(".")?
@@ -145,7 +145,7 @@ func TestIntegrationContextBuild(t *testing.T) {
 	}
 
 	// 5. Assertions
-	ctxDir := filepath.Join(root, ".ai-context")
+	ctxDir := filepath.Join(root, ".cortex")
 	assertExists(t, filepath.Join(ctxDir, "meta.json"))
 	assertExists(t, filepath.Join(ctxDir, "files", "manifest.json"))
 	assertExists(t, filepath.Join(ctxDir, "files", "chunks.ndjson")) // Checks Phase 4B

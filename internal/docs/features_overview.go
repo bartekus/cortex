@@ -23,7 +23,7 @@ import (
 	"github.com/bartekus/cortex/internal/specschema"
 )
 
-// GenerateFeatureOverview generates docs/inventory/features-overview.md from features.yaml and spec files.
+// GenerateFeatureOverview generates docs/__generated__/features-overview.md from features.yaml and spec files.
 func GenerateFeatureOverview(featuresPath, specRoot, outPath string) error {
 	// Load features
 	graph, err := features.LoadGraph(featuresPath)

@@ -39,12 +39,12 @@ func TestBuildContext_Golden(t *testing.T) {
 	}
 
 	// Verify meta.json
-	metaPath := filepath.Join(tempDir, ".ai-context", "meta.json")
+	metaPath := filepath.Join(tempDir, ".cortex", "meta.json")
 	assertFileExists(t, metaPath)
 	// Optionally check content
 
 	// Verify manifest.json
-	manifestPath := filepath.Join(tempDir, ".ai-context", "files", "manifest.json")
+	manifestPath := filepath.Join(tempDir, ".cortex", "files", "manifest.json")
 	assertFileExists(t, manifestPath)
 
 	bytes, _ := os.ReadFile(manifestPath)
@@ -61,7 +61,7 @@ func TestBuildContext_Golden(t *testing.T) {
 	}
 
 	// Verify digest.txt
-	digestPath := filepath.Join(tempDir, ".ai-context", "digest.txt")
+	digestPath := filepath.Join(tempDir, ".cortex", "digest.txt")
 	assertFileExists(t, digestPath)
 
 	dBytes, _ := os.ReadFile(digestPath)

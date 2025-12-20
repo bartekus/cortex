@@ -51,7 +51,7 @@ func TestStatusRoadmapCommand_ExecutesSuccessfully(t *testing.T) {
 	}
 
 	// Create output directory
-	outputDir := filepath.Join(tmpDir, "docs", "inventory")
+	outputDir := filepath.Join(tmpDir, "docs", "__generated__")
 	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		t.Fatalf("failed to create output directory: %v", err)
 	}
@@ -84,7 +84,7 @@ func TestStatusRoadmapCommand_ExecutesSuccessfully(t *testing.T) {
 	}
 
 	// Verify output file was created
-	outputPath := filepath.Join(tmpDir, "docs", "inventory", "feature-completion-analysis.md")
+	outputPath := filepath.Join(tmpDir, "docs", "__generated__", "feature-completion-analysis.md")
 	if _, err := os.Stat(outputPath); err != nil {
 		t.Fatalf("output file not created: %v", err)
 	}
@@ -259,7 +259,7 @@ func TestStatusRoadmapCommand_CreatesOutputDirectory(t *testing.T) {
 	}
 
 	// Verify output directory was created
-	outputDir := filepath.Join(tmpDir, "docs", "inventory")
+	outputDir := filepath.Join(tmpDir, "docs", "__generated__")
 	if _, err := os.Stat(outputDir); err != nil {
 		t.Fatalf("output directory not created: %v", err)
 	}
@@ -299,7 +299,7 @@ func TestStatusRoadmapCommand_OverwritesExistingFile(t *testing.T) {
 	}
 
 	// Create output directory and existing file
-	outputDir := filepath.Join(tmpDir, "docs", "inventory")
+	outputDir := filepath.Join(tmpDir, "docs", "__generated__")
 	if err := os.MkdirAll(outputDir, 0o750); err != nil {
 		t.Fatalf("failed to create output directory: %v", err)
 	}

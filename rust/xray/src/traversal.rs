@@ -8,6 +8,7 @@ use walkdir::{DirEntry, WalkDir};
 /// Directories to ignore strictly.
 const IGNORED_DIRS: &[&str] = &[
     ".git",
+    ".bin",
     "node_modules",
     "dist",
     "build",
@@ -17,8 +18,7 @@ const IGNORED_DIRS: &[&str] = &[
     ".cache",
     ".tmp",
     "coverage",
-    ".xraycache",
-    ".ai-context",
+    ".cortex",
 ];
 
 /// Known module files to detect at root.

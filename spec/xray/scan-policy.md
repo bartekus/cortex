@@ -11,7 +11,7 @@ Defines the logic governing *how* a repository is scanned, including what is ign
 - By default, scans all files in the target directory recursively.
 
 ### Exclusion (Ignored)
-- **Dot-directories**: `.git`, `.github`, `.xraycache`, etc. are ignored by default unless explicitly targeted.
+- **Dot-directories**: `.git`, `.github`, `.cortex`, etc. are ignored by default unless explicitly targeted.
 - **Binary/Large Files**: Files exceeding size thresholds (default 2MB) or invalid UTF-8 are **Included** in the index but marked as skipped with 0 LOC.
 
 ## Language Detection

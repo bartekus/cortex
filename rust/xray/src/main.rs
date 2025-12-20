@@ -41,7 +41,7 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Commands {
-    /// Scans the repository and updates .xraycache
+    /// Scans the repository and updates .cortex
     Scan {
         /// Target directory to scan (default: .)
         #[arg(default_value = ".")]
@@ -105,10 +105,11 @@ fn run_scan(target: &str, output: Option<String>) -> Result<()> {
     let bytes = canonical::to_canonical_json(&index)?;
 
     // 5. Determine output path
-    // Default: .xraycache/<slug>/data/index.json
+    // Default: .cortex/<slug>/data/index.json -> Default: .cortex/data/index.json
     let out_dir = match output {
         Some(p) => PathBuf::from(p),
-        None => repo_root.join(".xraycache").join(&repo_slug).join("data"),
+        None => repo_root.join(".cortex").join("data"),
+//         None => repo_root.join(".cortex").join(&repo_slug).join("data"),
     };
 
     let out_file = out_dir.join("index.json");

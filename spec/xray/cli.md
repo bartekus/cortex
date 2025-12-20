@@ -23,7 +23,7 @@ The XRAY CLI is the Rust-based engine for high-performance, deterministic reposi
 - **Command**: `xray <scan> [target] [flags]`
 
 ## Flags
-- `--output <dir>`: Directory to write the XRAY index (default: `.xraycache/<slug>/data`).
+- `--output <dir>`: Directory to write the XRAY index (default: `.cortex/data`).
 
 ## Behavior
 - **Scan**: Traverses the target directory, respecting `.xrayignore` (or equivalent policy).

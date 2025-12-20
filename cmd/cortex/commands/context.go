@@ -52,7 +52,7 @@ func NewContextBuildCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "build",
 		Short: "Build AI context representation",
-		Long:  "Builds a deterministic AI-readable context representation in .ai-context/",
+		Long:  "Builds a deterministic AI-readable context representation in .cortex/",
 		RunE:  runContextBuild,
 	}
 }
@@ -91,8 +91,9 @@ func NewContextXrayCommand() *cobra.Command {
 				if err != nil {
 					return fmt.Errorf("finding repo root: %w", err)
 				}
-				slug := filepath.Base(repoRoot)
-				out = filepath.Join(repoRoot, ".xraycache", slug, "data")
+				//slug := filepath.Base(repoRoot)
+				//out = filepath.Join(repoRoot, ".cortex", slug, "data")
+				out = filepath.Join(repoRoot, ".cortex", "data")
 			}
 
 			// Forward args in the Rust CLI order: scan <target> --output <dir>
@@ -100,7 +101,7 @@ func NewContextXrayCommand() *cobra.Command {
 			return runXraySubcommand(c, "scan", xrayArgs)
 		},
 	}
-	scanCmd.Flags().String("output", "", "Output directory for index.json (default: .xraycache/<slug>/data)")
+	scanCmd.Flags().String("output", "", "Output directory for index.json (default: .cortex/<slug>/data)")
 	cmd.AddCommand(scanCmd)
 
 	cmd.AddCommand(&cobra.Command{
@@ -143,8 +144,9 @@ func runContextBuild(cmd *cobra.Command, _ []string) error {
 	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] building AI context...\n")
 
 	// 1. Run XRAY scan (Rust)
-	slug := filepath.Base(repoRoot)
-	outputDir := filepath.Join(repoRoot, ".xraycache", slug, "data")
+	//slug := filepath.Base(repoRoot)
+	//outputDir := filepath.Join(repoRoot, ".cortex", slug, "data")
+	outputDir := filepath.Join(repoRoot, ".cortex", "data")
 
 	// Rust CLI order: scan <target> --output <dir>
 	xrayArgs := []string{".", "--output", outputDir}
@@ -165,12 +167,12 @@ func runContextBuild(cmd *cobra.Command, _ []string) error {
 		return fmt.Errorf("unmarshaling xray index: %w", err)
 	}
 
-	// 3. Build .ai-context structure
+	// 3. Build .cortex structure
 	if err := builder.BuildContext(repoRoot, &index); err != nil {
-		return fmt.Errorf("building .ai-context: %w", err)
+		return fmt.Errorf("building .cortex: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] AI context ready → .ai-context/\n")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] AI context ready → .cortex/\n")
 
 	return nil
 }
@@ -201,17 +203,17 @@ func resolveXrayBin(cmd *cobra.Command) (string, error) {
 	}
 
 	// Try release first, then debug
-	releasePath := filepath.Join(repoRoot, "ai.agent/rust/xray/target/release/xray")
+	releasePath := filepath.Join(repoRoot, "rust/target/release/xray")
 	if _, err := os.Stat(releasePath); err == nil {
 		return releasePath, nil
 	}
 
-	debugPath := filepath.Join(repoRoot, "ai.agent/rust/xray/target/debug/xray")
+	debugPath := filepath.Join(repoRoot, "rust/target/debug/xray")
 	if _, err := os.Stat(debugPath); err == nil {
 		return debugPath, nil
 	}
 
-	return "", fmt.Errorf("xray binary not found. Build it with `cargo build` in ai.agent/rust/xray/ or specify --xray-bin")
+	return "", fmt.Errorf("xray binary not found. Build it with `cargo build` in rust/xray/ or specify --xray-bin")
 }
 
 func runXraySubcommand(cmd *cobra.Command, sub string, args []string) error {

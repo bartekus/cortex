@@ -31,7 +31,7 @@ func NewFeaturesOverviewCommand() *cobra.Command {
 
 	cmd.Flags().StringVar(&featuresPath, "features", "spec/features.yaml", "Path to features.yaml")
 	cmd.Flags().StringVar(&specRoot, "spec-root", "spec", "Root directory containing spec files")
-	cmd.Flags().StringVar(&outPath, "out", "docs/inventory/features-overview.md", "Output path for overview document")
+	cmd.Flags().StringVar(&outPath, "out", "docs/__generated__/features-overview.md", "Output path for overview document")
 
 	return cmd
 }

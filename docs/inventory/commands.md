@@ -99,7 +99,7 @@ This document lists all user-facing surfaces of the Cortex system, including the
 - **Flags**: `-h, --help`, `-V, --version`
 
 ### Subcommands
-- `scan [target]`: Scans the repository and updates `.xraycache`.
+- `scan [target]`: Scans the repository and updates `.cortex`.
   - Args: `target` (default: `.`)
   - Flags: `--output <dir>` (Override output directory)
 - `docs`: Generate documentation (Not implemented).

@@ -41,6 +41,7 @@ rust/xray/tests/outputs/
 test-state/
 rust-dist/
 dist/
+docs/__generated__
 
 .cortex/
 .bin/

@@ -15,21 +15,21 @@ import (
 	"github.com/bartekus/cortex/internal/xray"
 )
 
-// Meta represents .ai-context/meta.json
+// Meta represents .cortex/meta.json
 type Meta struct {
 	ProjectName string `json:"project_name"`
 	Generator   string `json:"generator"`
 }
 
-// ManifestEntry represents an item in .ai-context/files/manifest.json
+// ManifestEntry represents an item in .cortex/files/manifest.json
 type ManifestEntry struct {
 	Path string `json:"path"`
 	Hash string `json:"hash"`
 }
 
-// BuildContext generates the deterministic .ai-context/ structure.
+// BuildContext generates the deterministic .cortex/ structure.
 func BuildContext(repoRoot string, index *xray.Index) error {
-	ctxDir := filepath.Join(repoRoot, ".ai-context")
+	ctxDir := filepath.Join(repoRoot, ".cortex")
 	if err := os.MkdirAll(filepath.Join(ctxDir, "files"), 0o755); err != nil {
 		return fmt.Errorf("creating context structure: %w", err)
 	}

@@ -15,7 +15,7 @@ outputs:
 ---
 # CLI Command: Context
 ## Summary
-The `context` command manages the AI context pipeline, including building .ai-context representations and running XRAY scans.
+The `context` command manages the AI context pipeline, including building .cortex representations and running XRAY scans.
 
 ## Surface
 - **Command**: `cortex context [subcommand]`

@@ -13,7 +13,32 @@ ADDLICENSE_VERSION := v1.1.1
 
 all: fmt-check lint test build
 
+repo: context docs reports gov
+
+docs: build
+	@echo " "
+	@echo "Validate and visualize the feature DAG."
+	@./bin/cortex features graph
+	@echo "Analyze downstream impact of a feature: CORE_REPO_CONTRACT."
+	@./bin/cortex features impact CORE_REPO_CONTRACT
+	@echo " "
+	@echo "Generate feature overview documentation."
+	@./bin/cortex features overview
+
 # --- Top-level targets (canonical) ---
+context: build
+	@echo " "
+	@echo "Analyzing repository structure and dependencies using xray."
+	@./bin/cortex context xray scan
+	@echo "Generating XRAY docs."
+	@./bin/cortex context xray docs
+	@echo "Generating AI context representation."
+	@./bin/cortex context build
+	@echo "Generate AI-Agent documentation."
+	@./bin/cortex context docs & 2>/dev/null
+	@echo "The error bellow is expected as the feature is WIP"
+	@echo " "
+
 gov: build
 	@echo " "
 	@echo "Running governance checks..."
@@ -34,6 +59,25 @@ gov: build
 	@echo "Validate the feature registry and spec integrity..."
 	@./bin/cortex gov validate
 	@echo " "
+
+reports: build
+	@echo " "
+	@echo "Generates a commit health report analyzing commit message discipline."
+	@./bin/cortex commit report
+	@echo "Saved as ./.cortex/reports/commit-health.json"
+	@echo " "
+	@echo "Generates a feature traceability report analyzing feature presence across spec, implementation, tests, and commits."
+	@./bin/cortex feature
+	@echo "Saved as ./.cortex/reports/feature-traceability.json"
+	@echo " "
+	@echo "Reads commit health and feature traceability reports and generates actionable suggestions for improving commit discipline."
+	@./bin/cortex commit suggest
+	@echo " "
+	@echo " "
+	@echo "Generate phase-level feature completion analysis from spec/features.yaml."
+	@./bin/cortex status roadmap
+	@echo "Saved as docs/__generated__/feature-completion-analysis.md"
+
 
 build: go-build rust-build
 
@@ -115,4 +159,4 @@ rust-test:
 
 rust-build:
 	@echo "Building Rust..."
-	@cd rust && cargo build -p cortex-mcp -p xray --release
+	@cd rust && cargo build -p cortex-mcp -p xray --release && cp ./target/release/xray ../bin/xray && cp ./target/release/cortex-mcp ../bin/cortex-mcp
