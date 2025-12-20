@@ -109,7 +109,7 @@ fn run_scan(target: &str, output: Option<String>) -> Result<()> {
     let out_dir = match output {
         Some(p) => PathBuf::from(p),
         None => repo_root.join(".cortex").join("data"),
-//         None => repo_root.join(".cortex").join(&repo_slug).join("data"),
+        // None => repo_root.join(".cortex").join(&repo_slug).join("data"),
     };
 
     let out_file = out_dir.join("index.json");
