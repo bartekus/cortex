@@ -9,7 +9,7 @@ GOIMPORTS_VERSION := v0.27.0
 GOLANGCI_LINT_VERSION := v1.63.4
 ADDLICENSE_VERSION := v1.1.1
 
-.PHONY: all build test lint fmt-check go-build go-test go-lint go-mod-tidy-check go-fmt-check tools-install rust-build rust-test rust-lint rust-fmt-check
+.PHONY: all build test lint fmt-check go-build go-test go-lint go-mod-tidy-check go-fmt-check tools-install rust-build rust-test rust-lint rust-fmt-check gov-onboard
 
 all: fmt-check lint test build
 
@@ -52,6 +52,31 @@ gov: build
 	@echo " "
 	@echo "Validate feature/spec/code/test mapping..."
 	@./bin/cortex gov feature-mapping
+	@echo " "
+	@echo "Validate spec file frontmatter..."
+	@./bin/cortex gov spec-validate
+	@echo " "
+	@echo "Validate alignment between CLI help output and Spec flags"
+	@./bin/cortex gov spec-vs-cli
+	@echo " "
+	@echo "Validate the feature registry and spec integrity..."
+	@./bin/cortex gov validate
+	@echo " "
+
+# gov-onboard is an onboarding-friendly variant of `gov`.
+# It runs the same suite but tolerates a failing feature-mapping report,
+# which is expected during early repo bootstrap (missing Feature annotations, etc.).
+gov-onboard: build
+	@echo " "
+	@echo "Running governance checks..."
+	@./bin/cortex gov drift help
+	@echo " "
+	@echo "Detect drift between implementation and fixtures..."
+	@./bin/cortex gov drift xray
+	@echo " "
+	@echo "Validate feature/spec/code/test mapping..."
+	@./bin/cortex gov feature-mapping & 2>/dev/null
+	@echo "NOTE: feature-mapping failed (expected during bootstrap)."
 	@echo " "
 	@echo "Validate spec file frontmatter..."
 	@./bin/cortex gov spec-validate
