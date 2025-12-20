@@ -5,14 +5,14 @@ status: approved
 domain: cli
 inputs:
   flags:
-    - --features
-    - --output
+    - name: --features
+    - name: --output
   args:
-    - subcommand
+    - name: subcommand
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Status
 ## Summary

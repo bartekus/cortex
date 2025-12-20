@@ -5,16 +5,16 @@ status: approved
 domain: cli
 inputs:
   flags:
-    - --json
-    - --state-dir
-    - --fail-on-warning
-    - --files0
+    - name: --json
+    - name: --state-dir
+    - name: --fail-on-warning
+    - name: --files0
   args:
-    - command (subcommand or skill_id)
+    - name: command (subcommand or skill_id)
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Run
 ## Summary

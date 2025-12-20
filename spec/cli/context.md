@@ -5,13 +5,13 @@ status: approved
 domain: cli
 inputs:
   flags:
-    - --xray-bin
+    - name: --xray-bin
   args:
-    - subcommand
+    - name: subcommand
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Context
 ## Summary

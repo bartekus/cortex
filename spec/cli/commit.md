@@ -5,17 +5,17 @@ status: approved
 domain: cli
 inputs:
   flags:
-    - --from
-    - --to
-    - --format
-    - --severity
-    - --max-suggestions
+    - name: --from
+    - name: --to
+    - name: --format
+    - name: --severity
+    - name: --max-suggestions
   args:
-    - subcommand
+    - name: subcommand
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Commit
 ## Summary

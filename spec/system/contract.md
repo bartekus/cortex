@@ -1,3 +1,21 @@
+---
+feature: CORE_REPO_CONTRACT
+version: v1
+status: approved
+domain: core
+inputs:
+  commands:
+    - make build
+    - make test
+outputs:
+  artifacts:
+    - ./bin/cortex
+    - rust/target/release/xray
+    - rust/target/release/cortex-mcp
+  exit_codes:
+    0: 0
+    1: 1
+---
 # Repository System Contract
 
 **Feature**: `CORE_REPO_CONTRACT`

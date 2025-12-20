@@ -5,11 +5,11 @@ status: approved
 domain: skills
 inputs:
   args:
-    - skill_id
+    - name: skill_id
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # Skills Registry
 ## Summary

@@ -6,11 +6,11 @@ domain: cli
 inputs:
   flags: []
   args:
-    - subcommand
+    - name: subcommand
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Features
 ## Summary

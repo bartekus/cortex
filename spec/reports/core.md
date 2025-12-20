@@ -3,7 +3,9 @@ feature: REPORTS_CORE
 version: v1
 status: approved
 domain: reports
-inputs: []
+inputs:
+  flags: []
+  args: []
 outputs:
   files:
     - .cortex/reports/*.json

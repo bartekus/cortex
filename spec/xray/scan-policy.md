@@ -1,3 +1,15 @@
+---
+feature: XRAY_SCAN_POLICY
+version: v1
+status: approved
+domain: xray
+inputs:
+  flags: []
+  args: []
+outputs:
+  artifacts:
+    - .cortex/data/index.json
+---
 # XRAY Scan Policy
 
 **Feature**: `XRAY_SCAN_POLICY`

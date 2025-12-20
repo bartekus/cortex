@@ -1,3 +1,18 @@
+---
+feature: REL_ARTIFACT_LAYOUT
+version: v1
+status: approved
+domain: release
+inputs:
+  build_system:
+    - goreleaser
+    - github-actions
+outputs:
+  artifacts:
+    - cortex_<version>_<os>_<arch>.tar.gz
+    - cortex_<version>_windows_<arch>.zip
+    - checksums.txt
+---
 # Release Artifact Layout
 
 **Feature**: `REL_ARTIFACT_LAYOUT`

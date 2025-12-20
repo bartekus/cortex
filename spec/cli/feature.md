@@ -8,8 +8,8 @@ inputs:
   args: []
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # CLI Command: Feature (Singular)
 ## Summary

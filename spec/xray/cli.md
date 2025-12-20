@@ -5,14 +5,14 @@ status: approved
 domain: xray
 inputs:
   flags:
-    - --output
+    - name: --output
   args:
-    - command
-    - target
+    - name: command
+    - name: target
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
+    0: 0
+    1: 1
 ---
 # XRAY CLI
 ## Summary

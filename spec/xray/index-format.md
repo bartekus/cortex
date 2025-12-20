@@ -1,3 +1,15 @@
+---
+feature: XRAY_INDEX_FORMAT
+version: v1
+status: approved
+domain: xray
+inputs:
+  files:
+    - index.json
+outputs:
+  artifacts:
+    - .cortex/data/index.json
+---
 # XRAY Index Format
 
 **Feature**: `XRAY_INDEX_FORMAT`

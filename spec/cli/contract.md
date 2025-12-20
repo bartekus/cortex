@@ -1,3 +1,18 @@
+---
+feature: CLI_CONTRACT
+version: v1
+status: approved
+domain: cli
+inputs:
+  flags:
+    - name: --verbose
+      short: -v
+      type: bool
+outputs:
+  exit_codes:
+    0: 0
+    1: 1
+---
 # CLI Command Interface
 
 **Feature**: `CLI_CONTRACT`

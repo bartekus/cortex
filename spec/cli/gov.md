@@ -5,14 +5,14 @@ status: approved
 domain: cli
 inputs:
   flags:
-    - --format
+    - name: --format
   args:
-    - subcommand
+    - name: subcommand
 outputs:
   exit_codes:
-    0: Success
-    1: Failure
-    2: Internal Error
+    0: 0 # Success
+    1: 1 # Failure
+    2: 2 # Internal Error
 ---
 # CLI Command: Gov
 ## Summary

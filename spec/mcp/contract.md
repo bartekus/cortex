@@ -1,3 +1,26 @@
+---
+feature: MCP_ROUTER_CONTRACT
+version: v1
+status: approved
+domain: mcp
+inputs:
+  transport:
+    type: stdio
+    protocol: json-rpc-2.0
+outputs:
+  exit_codes:
+    0: 0
+    1: 1
+---
+
+> TODO: Extend frontmatter:
+```
+capabilities:
+  tools:
+    - resolve_mcp
+    - list_mounts
+```
+
 # MCP Router Contract
 
 **Feature**: `MCP_ROUTER_CONTRACT`
