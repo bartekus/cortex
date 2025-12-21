@@ -59,3 +59,7 @@ Active workflows in `.github/workflows/` define the authoritative Continuous Int
 ## Compatibility
 - **Dev Environment**: Requires Go 1.23+, Rust 1.83+ (stable), Make, Bash.
 - **Platform Support**: Linux (amd64/arm64), macOS (amd64/arm64), Windows (limited support).
+
+## References
+- `.github/workflows/ci.yml`
+- `Makefile`

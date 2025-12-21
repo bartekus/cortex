@@ -3,6 +3,9 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+// Feature: XRAY_SCAN_POLICY
+// Spec: spec/xray/scan-policy.md
+
 // We use the binary itself or the library logic?
 // Ideally integration tests run the binary. But for unit testing logic we can import modules if lib.rs exists.
 // Since main.rs is a binary, we'll run it as a subprocess or we need to extract logic to lib.rs.

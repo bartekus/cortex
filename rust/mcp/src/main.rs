@@ -6,6 +6,9 @@ use std::io::{self, BufRead, Read, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
 
+// Feature: MCP_ROUTER_CONTRACT
+// Spec: spec/mcp/contract.md
+
 fn main() -> Result<()> {
     eprintln!("cortex-mcp starting (stdio - MCP framed JSON-RPC)");
 

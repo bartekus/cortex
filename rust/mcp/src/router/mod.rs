@@ -1,3 +1,6 @@
+// Feature: MCP_TOOLS
+// Spec: spec/mcp/tools.md
+
 // Router module
 pub mod cache;
 pub mod mounts;

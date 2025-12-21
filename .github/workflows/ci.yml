@@ -8,6 +8,10 @@
 #
 # See https://www.gnu.org/licenses/ for license details.
 #
+
+# Feature: CORE_REPO_CONTRACT
+# Spec: spec/system/contract.md
+
 name: CI
 
 on:

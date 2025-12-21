@@ -5,6 +5,9 @@ use std::collections::BTreeMap;
 use std::path::Path;
 use walkdir::{DirEntry, WalkDir};
 
+// Feature: XRAY_SCAN_POLICY
+// Spec: spec/xray/scan-policy.md
+
 /// Directories to ignore strictly.
 const IGNORED_DIRS: &[&str] = &[
     ".git",

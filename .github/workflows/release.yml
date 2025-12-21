@@ -1,4 +1,8 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
+
+# Feature: REL_ARTIFACT_LAYOUT
+# Spec: spec/release/contract.md
+
 name: Release
 
 on:

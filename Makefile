@@ -1,6 +1,9 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 # Cortex Makefile
 
+# Feature: CORE_REPO_CONTRACT
+# Spec: spec/system/contract.md
+
 SHELL := /bin/bash
 
 # Tools versions (overridable)

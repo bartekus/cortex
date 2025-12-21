@@ -52,3 +52,7 @@ The `cortex` archive **MUST** contain the following helper binaries alongside th
 ├── xray            # Helper (bundled)
 └── cortex-mcp      # Helper (bundled)
 ```
+
+## References
+- `.github/workflows/release.yml`
+- `.goreleaser.yaml`

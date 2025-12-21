@@ -2,6 +2,9 @@ use anyhow::Result;
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
+// Feature: XRAY_CLI
+// Spec: spec/xray/cli.md
+
 mod canonical;
 mod digest;
 mod hash;

@@ -1,3 +1,6 @@
+# Feature: REL_ARTIFACT_LAYOUT
+# Spec: spec/release/contract.md
+
 version: 2
 project_name: cortex
 

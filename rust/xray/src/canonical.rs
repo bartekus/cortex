@@ -4,6 +4,9 @@ use crate::schema::XrayIndex;
 use anyhow::{Context, Result};
 use serde_json::{Map, Value};
 
+// Feature: XRAY_INDEX_FORMAT
+// Spec: spec/xray/index-format.md
+
 /// Serializes the index to **Canonical JSON** (object keys sorted lexicographically, no extra whitespace).
 ///
 /// Determinism requirements:

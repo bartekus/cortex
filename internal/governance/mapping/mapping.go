@@ -90,11 +90,11 @@ type FeatureMapping struct {
 	// and the spec file frontmatter, not arbitrary file locations.
 	SpecPath string `json:"spec_path"`
 
-	// ImplFiles is the sorted list of Go implementation files that reference
+	// ImplFiles is the sorted list of implementation files that reference
 	// this feature via header comments.
 	ImplFiles []string `json:"impl_files"`
 
-	// TestFiles is the sorted list of Go test files that reference this
+	// TestFiles is the sorted list of test files that reference this
 	// feature via header comments.
 	TestFiles []string `json:"test_files"`
 
@@ -255,12 +255,53 @@ func analyzeWithFeatures(root string, metas []featureMeta) (Report, error) {
 			return nil
 		}
 
-		// Only care about Go files for mapping.
-		if !strings.HasSuffix(rel, ".go") {
+		// Only care about file types we can extract Feature/Spec headers from.
+		//
+		// Supported:
+		//   - Go: .go
+		//   - Rust: .rs
+		//   - YAML: .yml, .yaml
+		//   - Makefile: Makefile (no extension)
+		baseName := filepath.Base(rel)
+		ext := strings.ToLower(filepath.Ext(rel))
+		isMakefile := baseName == "Makefile"
+		isSupported := ext == ".go" || ext == ".rs" || ext == ".yml" || ext == ".yaml" || isMakefile
+		if !isSupported {
 			return nil
 		}
 
-		isTestFile := strings.HasSuffix(rel, "_test.go")
+		// Identify test files.
+		//
+		// Go conventions:
+		//   - *_test.go
+		//   - test_*.go
+		//
+		// Rust conventions (integration tests):
+		//   - */tests/*.rs
+		//   - *_test.rs
+		//   - test_*.rs
+		//
+		// Golden fixtures are treated as tests even if the filename does not include "test".
+		base := strings.ToLower(filepath.Base(rel))
+		norm := pathClean(rel)
+		isTestFile := false
+		switch ext {
+		case ".go":
+			isTestFile = strings.HasSuffix(base, "_test.go") || strings.HasPrefix(base, "test_")
+		case ".rs":
+			isTestFile = strings.Contains(norm, "/tests/") || strings.HasSuffix(base, "_test.rs") || strings.HasPrefix(base, "test_")
+		default:
+			// YAML/YML and Makefile are treated as implementation/config; never tests.
+			isTestFile = false
+		}
+		if !isTestFile {
+			// Golden files should count as tests even when not named like tests.
+			// We treat either a "golden" directory segment or a filename containing "golden" as test.
+			// This only applies to languages we consider testable sources (.go/.rs).
+			if ext == ".go" || ext == ".rs" {
+				isTestFile = strings.Contains(norm, "/golden/") || strings.Contains(base, "golden")
+			}
+		}
 
 		fileFeature, fileSpec, err := parseHeaders(path)
 		if err != nil {
@@ -468,11 +509,16 @@ func pathClean(p string) string {
 	return p
 }
 
-// parseHeaders reads a Go file and extracts the first Feature and Spec headers
+// parseHeaders reads a supported source/config file and extracts the first Feature and Spec headers
 // from line comments of the form:
 //
 //	// Feature: FEATURE_ID
 //	// Spec: spec/path/to/file.md
+//
+// or:
+//
+//	# Feature: FEATURE_ID
+//	# Spec: spec/path/to/file.md
 //
 // The match is case-insensitive on the keys.
 func parseHeaders(path string) (featureID, specPath string, err error) {
@@ -490,11 +536,17 @@ func parseHeaders(path string) (featureID, specPath string, err error) {
 	scanner := bufio.NewScanner(f)
 	for scanner.Scan() {
 		line := strings.TrimSpace(scanner.Text())
-		if !strings.HasPrefix(line, "//") {
+		prefix := ""
+		switch {
+		case strings.HasPrefix(line, "//"):
+			prefix = "//"
+		case strings.HasPrefix(line, "#"):
+			prefix = "#"
+		default:
 			continue
 		}
 
-		body := strings.TrimSpace(strings.TrimPrefix(line, "//"))
+		body := strings.TrimSpace(strings.TrimPrefix(line, prefix))
 		lower := strings.ToLower(body)
 		switch {
 		case strings.HasPrefix(lower, "feature:"):
