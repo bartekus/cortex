@@ -75,8 +75,7 @@ gov-onboard: build
 	@./bin/cortex gov drift xray
 	@echo " "
 	@echo "Validate feature/spec/code/test mapping..."
-	@./bin/cortex gov feature-mapping & 2>/dev/null
-	@echo "NOTE: feature-mapping failed (expected during bootstrap)."
+	@./bin/cortex gov feature-mapping || (echo "NOTE: feature-mapping failed (expected during bootstrap)." && true)
 	@echo " "
 	@echo "Validate spec file frontmatter..."
 	@./bin/cortex gov spec-validate
