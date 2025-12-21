@@ -15,7 +15,7 @@ import (
 )
 
 // updateGolden is a flag to update golden files during development.
-// Usage: go test -update ./ai.agent/cmd/cortex
+// Usage: go test -update ./cmd/cortex
 var updateGolden = flag.Bool("update", false, "update golden files")
 
 // readGoldenFile reads a golden file, or returns empty string if it doesn't exist.

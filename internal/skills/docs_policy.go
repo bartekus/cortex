@@ -8,6 +8,9 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 type DocsPolicy struct {
 	id     string
 	checks []runner.Skill

@@ -38,4 +38,19 @@ The Skills Registry defines the set of executable skills available to the `corte
 | `test:coverage` | Test | Runs tests with coverage analysis. |
 
 ## References
-- `internal/skills/`
+- `internal/skills/docs_doc_patterns.go`
+- `internal/skills/docs_feature_integrity.go`
+- `internal/skills/docs_header_comments.go`
+- `internal/skills/docs_orphan_docs.go`
+- `internal/skills/docs_orphan_specs.go`
+- `internal/skills/docs_policy.go`
+- `internal/skills/docs_provider_governance.go`
+- `internal/skills/docs_validate_spec.go`
+- `internal/skills/docs_yaml.go`
+- `internal/skills/format_gofumpt.go`
+- `internal/skills/lint_gofumpt.go`
+- `internal/skills/lint_golangci.go`
+- `internal/skills/purity.go`
+- `internal/skills/registry.go`
+- `internal/skills/test_basic.go`
+- `internal/skills/test_coverage.go`

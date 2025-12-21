@@ -6,6 +6,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Feature: CLI_COMMAND_FEATURES
+// Spec: spec/cli/features.md
+
 func NewFeaturesCommand() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "features",

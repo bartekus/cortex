@@ -6,6 +6,9 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 // Registry defines the canonical order of skills.
 // Even if not implemented, they are listed here to maintain stable interface.
 

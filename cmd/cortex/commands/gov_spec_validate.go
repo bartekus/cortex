@@ -9,6 +9,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
+
 func NewGovSpecValidateCommand() *cobra.Command {
 	var (
 		rootPath       string

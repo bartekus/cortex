@@ -23,6 +23,9 @@ import (
 	"github.com/bartekus/cortex/internal/projectroot"
 )
 
+// Feature: CLI_COMMAND_CONTEXT
+// Spec: spec/cli/context.md
+
 func TestFindRepoRoot(t *testing.T) {
 	// Test from current directory (should find repo root)
 	repoRoot, err := projectroot.Find(".")

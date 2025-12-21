@@ -12,6 +12,9 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 type DocsYaml struct {
 	id string
 }

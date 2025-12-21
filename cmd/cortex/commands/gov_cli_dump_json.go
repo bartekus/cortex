@@ -24,6 +24,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Feature: CLI_COMMAND_GOV
+// Spec: spec/cli/gov.md
+
 func NewGovCLIDumpJSONCommand() *cobra.Command {
 	var out string
 

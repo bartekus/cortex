@@ -11,6 +11,9 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 type LintGofumpt struct{}
 
 func (s *LintGofumpt) ID() string {

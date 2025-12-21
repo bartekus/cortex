@@ -17,6 +17,9 @@ import (
 	"github.com/bartekus/cortex/internal/skills"
 )
 
+// Feature: CLI_COMMAND_RUN
+// Spec: spec/cli/run.md
+
 var (
 	runJSON          bool
 	runStateDir      string

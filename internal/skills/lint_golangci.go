@@ -8,6 +8,9 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 type LintGolangCI struct{}
 
 func (s *LintGolangCI) ID() string {

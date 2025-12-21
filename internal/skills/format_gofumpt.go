@@ -9,6 +9,9 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
 type FormatGofumpt struct{}
 
 func (s *FormatGofumpt) ID() string {

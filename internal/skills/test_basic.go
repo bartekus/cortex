@@ -9,7 +9,10 @@ import (
 	"github.com/bartekus/cortex/internal/runner"
 )
 
-// Generic Exec Skill
+// Feature: SKILLS_REGISTRY
+// Spec: spec/skills/registry.md
+
+// ExecSkill Generic Exec Skill
 type ExecSkill struct {
 	id   string
 	args []string

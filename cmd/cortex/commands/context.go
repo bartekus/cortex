@@ -30,6 +30,9 @@ import (
 	"github.com/spf13/cobra"
 )
 
+// Feature: CLI_COMMAND_CONTEXT
+// Spec: spec/cli/context.md
+
 // NewContextCommand returns the `cortex context` command group.
 func NewContextCommand() *cobra.Command {
 	cmd := &cobra.Command{
