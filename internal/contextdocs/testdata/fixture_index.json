@@ -1,0 +1,48 @@
+{
+    "schemaVersion": "1.0.0",
+    "root": "cortex",
+    "target": ".",
+    "stats": {
+        "fileCount": 3,
+        "totalSize": 1024
+    },
+    "files": [
+        {
+            "path": "go.mod",
+            "size": 100,
+            "hash": "sha256:abc",
+            "lang": "Go Module",
+            "loc": 10,
+            "complexity": 0
+        },
+        {
+            "path": "main.go",
+            "size": 500,
+            "hash": "sha256:def",
+            "lang": "Go",
+            "loc": 50,
+            "complexity": 0
+        },
+        {
+            "path": "src/lib.rs",
+            "size": 424,
+            "hash": "sha256:ghi",
+            "lang": "Rust",
+            "loc": 40,
+            "complexity": 0
+        }
+    ],
+    "languages": {
+        "Go": 1,
+        "Go Module": 1,
+        "Rust": 1
+    },
+    "topDirs": {
+        ".": 2,
+        "src": 1
+    },
+    "moduleFiles": [
+        "go.mod"
+    ],
+    "digest": "deadbeef"
+}

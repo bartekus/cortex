@@ -24,7 +24,7 @@ Defines the logic governing *how* a repository is scanned, including what is ign
 
 ### Exclusion (Ignored)
 - **Dot-directories**: `.git`, `.github`, `.cortex`, etc. are ignored by default unless explicitly targeted.
-- **Binary/Large Files**: Files exceeding size thresholds (default 2MB) or invalid UTF-8 are **Included** in the index but marked as skipped with 0 LOC.
+- **Module marker**: Although `.git/` is ignored during traversal, XRAY MAY still include `.git` in `moduleFiles` in the index as a deterministic repository marker.
 
 ## Language Detection
 - **Method**: Extension-based detection (primary).

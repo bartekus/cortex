@@ -23,6 +23,7 @@ import (
 	"path/filepath"
 
 	"github.com/bartekus/cortex/internal/builder"
+	"github.com/bartekus/cortex/internal/contextdocs"
 	"github.com/bartekus/cortex/internal/projectroot"
 	"github.com/bartekus/cortex/internal/xray"
 
@@ -256,16 +257,44 @@ func runXraySubcommand(cmd *cobra.Command, sub string, args []string) error {
 	return nil
 }
 
-// runContextDocs executes the context:docs npm script.
+// runContextDocs executes the context:docs generation in Go.
 func runContextDocs(cmd *cobra.Command, _ []string) error {
-	_, err := projectroot.Find(".")
+	repoRoot, err := projectroot.Find(".")
 	if err != nil {
 		return fmt.Errorf("finding repo root: %w", err)
 	}
 
-	// Deprecation Notice (Option A)
-	return fmt.Errorf("context docs generation via Node is deprecated. Docs projection will be reimplemented in Go in Phase 4")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] generating AI-Agent docs (Go projection)...\n")
 
-	// _, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] generating AI-Agent docs...\n")
-	// ... removed ...
+	// 1. Locate Index
+	// Standard path: .cortex/data/index.json
+	indexPath := filepath.Join(repoRoot, ".cortex", "data", "index.json")
+	indexData, err := os.ReadFile(indexPath)
+	if err != nil {
+		return fmt.Errorf("reading xray index at %s: %w", indexPath, err)
+	}
+
+	var index xray.Index
+	if err := json.Unmarshal(indexData, &index); err != nil {
+		return fmt.Errorf("unmarshaling xray index: %w", err)
+	}
+
+	// 2. Resolve Output Directory
+	// Standard path: docs/__generated__/context/
+	outDir := filepath.Join(repoRoot, "docs", "__generated__", "context")
+	if err := os.MkdirAll(outDir, 0o755); err != nil {
+		return fmt.Errorf("creating output directory %s: %w", outDir, err)
+	}
+
+	// 3. Generate Docs
+	gen := &contextdocs.Generator{
+		Index:  &index,
+		OutDir: outDir,
+	}
+	if err := gen.Generate(); err != nil {
+		return fmt.Errorf("generating docs: %w", err)
+	}
+
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] \u2713 docs generated in docs/__generated__/context/\n")
+	return nil
 }

@@ -38,8 +38,7 @@ context: build
 	@echo "Generating AI context representation."
 	@./bin/cortex context build
 	@echo "Generate AI-Agent documentation."
-	@./bin/cortex context docs & 2>/dev/null
-	@echo "The error bellow is expected as the feature is WIP"
+	@./bin/cortex context docs
 	@echo " "
 
 gov: build
