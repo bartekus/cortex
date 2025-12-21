@@ -24,7 +24,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func NewGovCLIDumpJSONCommand(root *cobra.Command) *cobra.Command {
+func NewGovCLIDumpJSONCommand() *cobra.Command {
 	var out string
 
 	cmd := &cobra.Command{
@@ -34,9 +34,10 @@ func NewGovCLIDumpJSONCommand(root *cobra.Command) *cobra.Command {
 			if out == "" {
 				return fmt.Errorf("--out is required")
 			}
-
-			// If your introspect package already has a helper, prefer it.
-			// Otherwise, you can implement traversal (see note below).
+			root := cmd.Root()
+			if root == nil {
+				return fmt.Errorf("failed to resolve root command")
+			}
 			tree := introspect.Introspect(root)
 
 			if err := os.MkdirAll(filepath.Dir(out), 0o755); err != nil {
