@@ -81,8 +81,11 @@ gov-onboard: build
 	@echo "Validate spec file frontmatter..."
 	@./bin/cortex gov spec-validate
 	@echo " "
+	@echo "Dump the CLI command tree (commands + flags) to JSON for spec-vs-cli"
+	@./bin/cortex gov cli-dump-json --out .cortex/data/cli.json
+	@echo " "
 	@echo "Validate alignment between CLI help output and Spec flags"
-	@./bin/cortex gov spec-vs-cli
+	@./bin/cortex gov spec-vs-cli --binary-json .cortex/data/cli.json
 	@echo " "
 	@echo "Validate the feature registry and spec integrity..."
 	@./bin/cortex gov validate

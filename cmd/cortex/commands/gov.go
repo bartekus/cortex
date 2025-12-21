@@ -37,6 +37,7 @@ func NewGovCommand() *cobra.Command {
 
 	cmd.AddCommand(newGovFeatureMappingCommand())
 	cmd.AddCommand(NewGovSpecValidateCommand())
+	cmd.AddCommand(NewGovCLIDumpJSONCommand())
 	cmd.AddCommand(NewGovSpecVsCLICommand())
 	cmd.AddCommand(NewGovValidateCommand())
 	cmd.AddCommand(NewGovDriftCommand())
