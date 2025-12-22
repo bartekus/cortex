@@ -1,17 +1,18 @@
-use cortex_mcp::router::{Router, JsonRpcRequest};
+use cortex_mcp::io::fs::RealFs;
 use cortex_mcp::resolver::order::ResolveEngine;
 use cortex_mcp::router::mounts::MountRegistry;
-use cortex_mcp::io::fs::RealFs;
-use std::sync::Arc;
+use cortex_mcp::router::{JsonRpcRequest, Router};
 use serde_json::json;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 // Feature: MCP_TOOLS
 // Spec: spec/mcp/tools.md
 
 #[test]
 fn test_mcp_tools_list() {
-    let fs = Arc::new(RealFs);
-    let resolver = Arc::new(ResolveEngine::new(fs, None));
+    let fs = RealFs;
+    let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
     let router = Router::new(resolver, mounts);
 
@@ -25,9 +26,9 @@ fn test_mcp_tools_list() {
     let resp = router.handle_request(&req);
     assert!(resp.result.is_some());
     let res = resp.result.unwrap();
-    
+
     let tools = res["tools"].as_array().expect("tools should be an array");
-    
+
     // Check for required tools
     let required_tools = vec!["resolve_mcp", "list_mounts"];
     for req_tool in required_tools {
@@ -38,8 +39,8 @@ fn test_mcp_tools_list() {
 
 #[test]
 fn test_mcp_tools_call_validation() {
-    let fs = Arc::new(RealFs);
-    let resolver = Arc::new(ResolveEngine::new(fs, None));
+    let fs = RealFs;
+    let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
     let router = Router::new(resolver, mounts);
 
@@ -49,7 +50,7 @@ fn test_mcp_tools_call_validation() {
         method: "tools/call".to_string(),
         params: Some(json!({
             "name": "resolve_mcp",
-            "arguments": {} 
+            "arguments": {}
         })),
         id: Some(json!(2)),
     };

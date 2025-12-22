@@ -14,9 +14,17 @@ ADDLICENSE_VERSION := v1.1.1
 
 .PHONY: all build test lint fmt-check go-build go-test go-lint go-mod-tidy-check go-fmt-check tools-install rust-build rust-test rust-lint rust-fmt-check gov-onboard
 
-all: fmt-check lint test build
+install:
+	@echo "Installing gofumpt@$(GOFUMPT_VERSION)"
+	@go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
+	@echo "Installing goimports@$(GOIMPORTS_VERSION)"
+	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
+	@echo "Installing golangci-lint@$(GOLANGCI_LINT_VERSION)"
+	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
+	@echo "Installing addlicense@$(ADDLICENSE_VERSION)"
+	@go install github.com/google/addlicense@$(ADDLICENSE_VERSION)
 
-repo: clean context docs reports gov-onboard
+all: clean fmt-check lint test build context docs reports gov
 
 clean:
 	@rm -rf .cortex docs/__generated__
@@ -58,30 +66,6 @@ gov: build
 	@echo "Validate spec file frontmatter..."
 	@./bin/cortex gov spec-validate
 	@echo " "
-	@echo "Validate alignment between CLI help output and Spec flags"
-	@./bin/cortex gov spec-vs-cli
-	@echo " "
-	@echo "Validate the feature registry and spec integrity..."
-	@./bin/cortex gov validate
-	@echo " "
-
-# gov-onboard is an onboarding-friendly variant of `gov`.
-# It runs the same suite but tolerates a failing feature-mapping report,
-# which is expected during early repo bootstrap (missing Feature annotations, etc.).
-gov-onboard: build
-	@echo " "
-	@echo "Running governance checks..."
-	@./bin/cortex gov drift help
-	@echo " "
-	@echo "Detect drift between implementation and fixtures..."
-	@./bin/cortex gov drift xray
-	@echo " "
-	@echo "Validate feature/spec/code/test mapping..."
-	@./bin/cortex gov feature-mapping || (echo "NOTE: feature-mapping failed (expected during bootstrap)." && true)
-	@echo " "
-	@echo "Validate spec file frontmatter..."
-	@./bin/cortex gov spec-validate
-	@echo " "
 	@echo "Dump the CLI command tree (commands + flags) to JSON for spec-vs-cli"
 	@./bin/cortex gov cli-dump-json --out .cortex/data/cli.json
 	@echo " "
@@ -110,9 +94,7 @@ reports: build
 	@./bin/cortex status roadmap
 	@echo "Saved as docs/__generated__/feature-completion-analysis.md"
 
-build: fmt-check lint test
-	go-build
-	rust-build
+build: go-build rust-build
 
 test: go-test rust-test
 
@@ -165,16 +147,6 @@ go-fmt-check:
 		echo "Go code has missing/unordered imports. Run 'goimports -w .'"; \
 		exit 1; \
 	fi
-
-tools-install:
-	@echo "Installing gofumpt@$(GOFUMPT_VERSION)"
-	@go install mvdan.cc/gofumpt@$(GOFUMPT_VERSION)
-	@echo "Installing goimports@$(GOIMPORTS_VERSION)"
-	@go install golang.org/x/tools/cmd/goimports@$(GOIMPORTS_VERSION)
-	@echo "Installing golangci-lint@$(GOLANGCI_LINT_VERSION)"
-	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
-	@echo "Installing addlicense@$(ADDLICENSE_VERSION)"
-	@go install github.com/google/addlicense@$(ADDLICENSE_VERSION)
 
 # --- Rust (rust/ root) ---
 

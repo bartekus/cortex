@@ -45,7 +45,6 @@ docs/__generated__
 
 .cortex/
 .bin/
-bin/
 bin/cortex
 bin/xray
 bin/cortex-mcp

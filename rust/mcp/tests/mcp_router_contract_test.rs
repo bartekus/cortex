@@ -1,18 +1,19 @@
-use cortex_mcp::router::{Router, JsonRpcRequest};
+use cortex_mcp::io::fs::RealFs;
 use cortex_mcp::resolver::order::ResolveEngine;
 use cortex_mcp::router::mounts::MountRegistry;
-use cortex_mcp::io::fs::RealFs;
-use std::sync::Arc;
+use cortex_mcp::router::{JsonRpcRequest, Router};
 use serde_json::json;
+use std::path::PathBuf;
+use std::sync::Arc;
 
 // Feature: MCP_ROUTER_CONTRACT
 // Spec: spec/mcp/contract.md
 
 #[test]
 fn test_router_contract_routing() {
-    let fs = Arc::new(RealFs);
+    let fs = RealFs;
     // Initialize without config for now
-    let resolver = Arc::new(ResolveEngine::new(fs, None));
+    let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
     let router = Router::new(resolver, mounts);
 
@@ -27,7 +28,7 @@ fn test_router_contract_routing() {
     assert!(resp.error.is_some());
     let err = resp.error.unwrap();
     assert_eq!(err["code"], -32601);
-    
+
     // 2. initialize -> OK
     let req = JsonRpcRequest {
         jsonrpc: "2.0".to_string(),

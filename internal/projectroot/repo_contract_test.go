@@ -40,11 +40,26 @@ func TestCoreRepoContract(t *testing.T) {
 	sContent := string(content)
 
 	requiredTargets := []string{
-		`^repo:`,
-		`^gov:`,
+		`^install:`,
+		`^all:`,
+		`^clean:`,
+		`^docs:`,
 		`^context:`,
-		`^test:`,
+		`^gov:`,
+		`^reports:`,
 		`^build:`,
+		`^test:`,
+		`^lint:`,
+		`^fmt-check:`,
+		`^go-build:`,
+		`^go-test:`,
+		`^go-lint:`,
+		`^go-mod-tidy-check:`,
+		`^go-fmt-check:`,
+		`^rust-fmt-check:`,
+		`^rust-lint:`,
+		`^rust-test:`,
+		`^rust-build:`,
 	}
 
 	for _, targetRegex := range requiredTargets {

@@ -35,7 +35,7 @@ func TestRelArtifactLayout(t *testing.T) {
 		"builds:",
 		"archives:",
 		// We expect the 'cortex' binary to be defined
-		"- cortex",
+		"- id: cortex",
 	}
 
 	for _, anchor := range requiredAnchors {

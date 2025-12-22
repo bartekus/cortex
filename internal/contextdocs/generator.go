@@ -65,7 +65,7 @@ func (g *Generator) renderIndex() error {
 		topDirRows = append(topDirRows, []string{k, strconv.Itoa(count)})
 	}
 	b.WriteString(projection.RenderTable([]string{"Directory", "Files"}, topDirRows))
-	b.WriteString("\n")
+	// b.WriteString("\n")
 
 	return projection.AtomicWrite(filepath.Join(g.OutDir, "index.md"), []byte(b.String()))
 }

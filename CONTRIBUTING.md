@@ -8,7 +8,7 @@
 
 1. **Setup**: Install required linters and tools.
    ```bash
-   make tools-install
+   make install
    ```
 
 2. **Verify**: Run all checks before pushing.

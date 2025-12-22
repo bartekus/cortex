@@ -3,6 +3,8 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
+use serde_json::Value;
+
 #[test]
 fn test_index_format() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
@@ -13,8 +15,11 @@ fn test_index_format() {
     let temp_dir = tempfile::tempdir().expect("Failed to create temp dir");
     let fixture_dst = temp_dir.path().join("min_repo");
 
-    let copy_options = fs_extra::dir::CopyOptions::new().overwrite(true).copy_inside(true);
-    fs_extra::dir::copy(&fixture_src, temp_dir.path(), &copy_options).expect("Failed to copy fixture");
+    let copy_options = fs_extra::dir::CopyOptions::new()
+        .overwrite(true)
+        .copy_inside(true);
+    fs_extra::dir::copy(&fixture_src, temp_dir.path(), &copy_options)
+        .expect("Failed to copy fixture");
 
     // Add .git to ensure it is treated as a repo
     let git_dir = fixture_dst.join(".git");
@@ -40,24 +45,121 @@ fn test_index_format() {
     let index_path = output_dir.join("index.json");
     let content = fs::read_to_string(&index_path).expect("Failed to read index.json");
 
-    // Assert JSON Structure Matches Contract
-    // 1. Root fields
-    assert!(content.contains(r#""schemaVersion":"1.0.0""#), "Missing schemaVersion");
-    assert!(content.contains(r#""scanId":""#), "Missing scanId");
-    // "indexedAt" is conditionally excluded in some contexts or checked? The spec says it should be there?
-    // golden_scan.rs checked it is NOT present (forbidden field check).
-    // If spec requires it, we should check it. But golden_scan suggests deterministic output might strip it.
-    // Let's assume deterministic output for now.
+    // Assert JSON Structure Matches Contract (index.json schemaVersion 1.0.0)
+    let v: Value = serde_json::from_str(&content).expect("index.json must be valid JSON");
 
-    assert!(content.contains(r#""rootHash":""#), "Missing rootHash");
+    // 1. Root fields
+    assert_eq!(
+        v.get("schemaVersion").and_then(Value::as_str),
+        Some("1.0.0"),
+        "schemaVersion must be 1.0.0"
+    );
+
+    assert!(
+        v.get("digest").and_then(Value::as_str).is_some(),
+        "Missing digest"
+    );
+
+    assert!(
+        v.get("root").and_then(Value::as_str).is_some(),
+        "Missing root"
+    );
+
+    assert!(
+        v.get("target").and_then(Value::as_str).is_some(),
+        "Missing target"
+    );
+
+    // These were in the old test but are not in the provided index.json structure
+    assert!(
+        v.get("scanId").is_none(),
+        "scanId must not be present in index.json"
+    );
+    assert!(
+        v.get("rootHash").is_none(),
+        "rootHash must not be present in index.json"
+    );
 
     // 2. Summary fields
-    assert!(content.contains(r#""languages":""#), "Missing languages summary");
-    assert!(content.contains(r#""files":""#), "Missing files count");
+    let languages = v
+        .get("languages")
+        .and_then(Value::as_object)
+        .expect("Missing languages object");
+    assert!(!languages.is_empty(), "languages object must not be empty");
 
     // 3. Module files
-    assert!(content.contains(r#""moduleFiles":["#), "Missing moduleFiles");
+    let module_files = v
+        .get("moduleFiles")
+        .and_then(Value::as_array)
+        .expect("Missing moduleFiles array");
+    assert!(!module_files.is_empty(), "moduleFiles must not be empty");
 
-    // 4. File listing
-    assert!(content.contains(r#""path":"main.go""#), "Missing expected file entry");
+    // 4. stats
+    let stats = v
+        .get("stats")
+        .and_then(Value::as_object)
+        .expect("Missing stats object");
+    assert!(
+        stats.get("fileCount").and_then(Value::as_u64).is_some(),
+        "stats.fileCount missing or not a number"
+    );
+    assert!(
+        stats.get("totalSize").and_then(Value::as_u64).is_some(),
+        "stats.totalSize missing or not a number"
+    );
+
+    // 5. topDirs
+    let top_dirs = v
+        .get("topDirs")
+        .and_then(Value::as_object)
+        .expect("Missing topDirs object");
+    assert!(!top_dirs.is_empty(), "topDirs must not be empty");
+
+    // 6. File listing
+    let files = v
+        .get("files")
+        .and_then(Value::as_array)
+        .expect("Missing files array");
+    assert!(!files.is_empty(), "files array must not be empty");
+
+    // Ensure a specific expected entry exists (matches your sample)
+    assert!(
+        files
+            .iter()
+            .any(|f| f.get("path").and_then(Value::as_str) == Some("main.go")),
+        "Missing expected file entry: main.go"
+    );
+
+    // Validate per-file object contract for every entry (matches sample shape)
+    for (i, f) in files.iter().enumerate() {
+        let obj = f
+            .as_object()
+            .unwrap_or_else(|| panic!("files[{i}] must be an object"));
+
+        assert!(
+            obj.get("path").and_then(Value::as_str).is_some(),
+            "files[{i}] missing path"
+        );
+        assert!(
+            obj.get("lang").and_then(Value::as_str).is_some(),
+            "files[{i}] missing lang"
+        );
+        assert!(
+            obj.get("hash").and_then(Value::as_str).is_some(),
+            "files[{i}] missing hash"
+        );
+
+        assert!(
+            obj.get("loc").and_then(Value::as_u64).is_some(),
+            "files[{i}] missing loc"
+        );
+        assert!(
+            obj.get("size").and_then(Value::as_u64).is_some(),
+            "files[{i}] missing size"
+        );
+        assert!(
+            obj.get("complexity").and_then(Value::as_u64).is_some(),
+            "files[{i}] missing complexity"
+        );
+    }
 }

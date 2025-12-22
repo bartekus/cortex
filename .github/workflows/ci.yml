@@ -47,7 +47,7 @@ jobs:
           workspaces: rust
 
       - name: Install Tools
-        run: make tools-install
+        run: make install
 
       - name: Lint
         run: make lint
