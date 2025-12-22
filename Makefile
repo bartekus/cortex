@@ -35,9 +35,9 @@ docs: build
 context: build
 	@echo " "
 	@echo "Analyzing repository structure and dependencies using xray."
-	@./bin/cortex context xray scan
+	@./bin/cortex context xray all
 	@echo "Generating XRAY docs."
-	@./bin/cortex context xray docs
+#	@./bin/cortex context xray docs
 	@echo "Generating AI context representation."
 	@./bin/cortex context build
 	@echo "Generate AI-Agent documentation."
@@ -110,8 +110,9 @@ reports: build
 	@./bin/cortex status roadmap
 	@echo "Saved as docs/__generated__/feature-completion-analysis.md"
 
-
-build: go-build rust-build
+build: fmt-check lint test
+	go-build
+	rust-build
 
 test: go-test rust-test
 

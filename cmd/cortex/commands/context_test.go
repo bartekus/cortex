@@ -54,7 +54,7 @@ func TestFindRepoRoot(t *testing.T) {
 	}
 
 	// Test from a subdirectory
-	subDir := filepath.Join(repoRoot, "ai.agent/cmd/cortex/commands")
+	subDir := filepath.Join(repoRoot, "cmd/cortex/commands")
 	repoRoot2, err := projectroot.Find(subDir)
 	if err != nil {
 		t.Fatalf("projectroot.Find from subdirectory failed: %v", err)

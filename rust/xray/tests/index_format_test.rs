@@ -3,9 +3,6 @@ use std::fs;
 use std::path::PathBuf;
 use std::process::Command;
 
-// Feature: XRAY_INDEX_FORMAT
-// Spec: spec/xray/index-format.md
-
 #[test]
 fn test_index_format() {
     let manifest_dir = env::var("CARGO_MANIFEST_DIR").expect("CARGO_MANIFEST_DIR not set");
