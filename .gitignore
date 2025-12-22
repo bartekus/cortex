@@ -48,4 +48,3 @@ docs/__generated__
 bin/cortex
 bin/xray
 bin/cortex-mcp
-cortex
