@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -20,6 +21,10 @@ func TestXRayCLI(t *testing.T) {
 
 	// Expect xray binary to be in bin/xray (standard local dev layout)
 	xrayPath := filepath.Join(root, "bin", "xray")
+
+	if _, err := os.Stat(xrayPath); os.IsNotExist(err) {
+		t.Skipf("xray binary not found at %s; skipping integration test", xrayPath)
+	}
 
 	cmd := exec.Command(xrayPath, "--help")
 	out, err := cmd.CombinedOutput()
