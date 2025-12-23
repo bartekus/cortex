@@ -10,7 +10,7 @@ import (
 // Spec: spec/cli/run.md
 
 func TestCLICommandRun(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCmd()
 	b := bytes.NewBufferString("")
 	cmd.SetOut(b)
 	cmd.SetArgs([]string{"run", "--help"})

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -13,7 +14,7 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Feature: CLI_COMMAND_GOV
 // Spec: spec/cli/gov.md
-package git
+package reports
 
 import (
 	"context"
@@ -365,15 +366,6 @@ func TestRunGitLog_InvalidRepo(t *testing.T) {
 	if !strings.Contains(err.Error(), "running git log") {
 		t.Errorf("expected error to mention 'running git log', got: %v", err)
 	}
-}
-
-// fakeHistorySource is a test helper that implements HistorySource without shelling out.
-type fakeHistorySource struct {
-	commits []commithealth.CommitMetadata
-}
-
-func (f *fakeHistorySource) Commits() ([]commithealth.CommitMetadata, error) {
-	return f.commits, nil
 }
 
 func TestFakeHistorySource(t *testing.T) {

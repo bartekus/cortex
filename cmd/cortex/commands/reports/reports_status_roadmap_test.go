@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -14,7 +15,7 @@ See https://www.gnu.org/licenses/ for license details.
 // Feature: CLI_COMMAND_STATUS
 // Spec: spec/cli/status.md
 
-package commands
+package reports
 
 import (
 	"bytes"
@@ -71,8 +72,8 @@ func TestStatusRoadmapCommand_ExecutesSuccessfully(t *testing.T) {
 	}
 
 	// Create status command
-	cmd := NewStatusCommand()
-	cmd.SetArgs([]string{"roadmap"})
+	cmd := NewReportsCommand()
+	cmd.SetArgs([]string{"status-roadmap"})
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -129,8 +130,8 @@ func TestStatusRoadmapCommand_HandlesMissingFeaturesYAML(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	cmd := NewStatusCommand()
-	cmd.SetArgs([]string{"roadmap"})
+	cmd := NewReportsCommand()
+	cmd.SetArgs([]string{"status-roadmap"})
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -184,8 +185,8 @@ func TestStatusRoadmapCommand_HandlesInvalidYAML(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	cmd := NewStatusCommand()
-	cmd.SetArgs([]string{"roadmap"})
+	cmd := NewReportsCommand()
+	cmd.SetArgs([]string{"status-roadmap"})
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -246,8 +247,8 @@ func TestStatusRoadmapCommand_CreatesOutputDirectory(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	cmd := NewStatusCommand()
-	cmd.SetArgs([]string{"roadmap"})
+	cmd := NewReportsCommand()
+	cmd.SetArgs([]string{"status-roadmap"})
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)
@@ -324,8 +325,8 @@ func TestStatusRoadmapCommand_OverwritesExistingFile(t *testing.T) {
 		t.Fatalf("failed to change directory: %v", err)
 	}
 
-	cmd := NewStatusCommand()
-	cmd.SetArgs([]string{"roadmap"})
+	cmd := NewReportsCommand()
+	cmd.SetArgs([]string{"status-roadmap"})
 
 	var stdout, stderr bytes.Buffer
 	cmd.SetOut(&stdout)

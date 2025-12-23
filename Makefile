@@ -43,9 +43,9 @@ docs: build
 context: build
 	@echo " "
 	@echo "Analyzing repository structure and dependencies using xray."
-	@./bin/cortex context xray all
+	@./bin/cortex context xray scan
 	@echo "Generating XRAY docs."
-#	@./bin/cortex context xray docs
+	@./bin/cortex context xray docs
 	@echo "Generating AI context representation."
 	@./bin/cortex context build
 	@echo "Generate AI-Agent documentation."
@@ -79,19 +79,19 @@ gov: build
 reports: build
 	@echo " "
 	@echo "Generates a commit health report analyzing commit message discipline."
-	@./bin/cortex commit report
+	@./bin/cortex reports commit-report
 	@echo "Saved as ./.cortex/reports/commit-health.json"
 	@echo " "
 	@echo "Generates a feature traceability report analyzing feature presence across spec, implementation, tests, and commits."
-	@./bin/cortex feature
+	@./bin/cortex reports feature-traceability
 	@echo "Saved as ./.cortex/reports/feature-traceability.json"
 	@echo " "
 	@echo "Reads commit health and feature traceability reports and generates actionable suggestions for improving commit discipline."
-	@./bin/cortex commit suggest
+	@./bin/cortex reports commit-suggest
 	@echo " "
 	@echo " "
 	@echo "Generate phase-level feature completion analysis from spec/features.yaml."
-	@./bin/cortex status roadmap
+	@./bin/cortex reports status-roadmap
 	@echo "Saved as docs/__generated__/feature-completion-analysis.md"
 
 build: go-build rust-build

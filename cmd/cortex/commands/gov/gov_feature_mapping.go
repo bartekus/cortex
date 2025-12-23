@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -11,41 +12,20 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-// Package commands contains Cobra subcommands for the Cortex CLI.
-package commands
+package gov
 
 import (
 	"encoding/json"
 	"fmt"
 	"sort"
 
+	"github.com/bartekus/cortex/cmd/cortex/internal/clierr"
 	"github.com/spf13/cobra"
 
 	"github.com/bartekus/cortex/internal/governance/mapping"
 )
 
-// Feature: CLI_COMMAND_GOV
-// Spec: spec/cli/gov.md
-
-// NewGovCommand returns the `cortex gov` command.
-func NewGovCommand() *cobra.Command {
-	cmd := &cobra.Command{
-		Use:   "gov",
-		Short: "Governance checks for Cortex",
-		Long:  "Governance commands for validating Cortex's spec, feature, and code alignment",
-	}
-
-	cmd.AddCommand(newGovFeatureMappingCommand())
-	cmd.AddCommand(NewGovSpecValidateCommand())
-	cmd.AddCommand(NewGovCLIDumpJSONCommand())
-	cmd.AddCommand(NewGovSpecVsCLICommand())
-	cmd.AddCommand(NewGovValidateCommand())
-	cmd.AddCommand(NewGovDriftCommand())
-
-	return cmd
-}
-
-func newGovFeatureMappingCommand() *cobra.Command {
+func NewGovFeatureMappingCommand() *cobra.Command {
 	var format string
 
 	cmd := &cobra.Command{
@@ -58,27 +38,27 @@ func newGovFeatureMappingCommand() *cobra.Command {
 			report, err := mapping.Analyze(opts)
 			if err != nil {
 				// Internal error – use exit code 2.
-				return newExitError(2, fmt.Sprintf("governance feature mapping failed: %v", err))
+				return clierr.New(2, fmt.Sprintf("governance feature mapping failed: %v", err))
 			}
 
 			switch format {
 			case "json":
 				if err := renderReportJSON(cmd, report); err != nil {
 					// Rendering issues are internal errors.
-					return newExitError(2, fmt.Sprintf("render mapping report (json): %v", err))
+					return clierr.New(2, fmt.Sprintf("render mapping report (json): %v", err))
 				}
 			case "text", "":
 				if err := renderReportText(cmd, report); err != nil {
 					// Rendering issues are internal errors.
-					return newExitError(2, fmt.Sprintf("render mapping report (text): %v", err))
+					return clierr.New(2, fmt.Sprintf("render mapping report (text): %v", err))
 				}
 			default:
-				return newExitError(2, fmt.Sprintf("unsupported format %q (expected text or json)", format))
+				return clierr.New(2, fmt.Sprintf("unsupported format %q (expected text or json)", format))
 			}
 
 			// After rendering, decide exit code based on violations.
 			if len(report.Violations) > 0 {
-				return newExitError(1, fmt.Sprintf("feature mapping validation failed with %d violation(s)", len(report.Violations)))
+				return clierr.New(1, fmt.Sprintf("feature mapping validation failed with %d violation(s)", len(report.Violations)))
 			}
 
 			return nil
@@ -190,26 +170,4 @@ func renderReportText(cmd *cobra.Command, report mapping.Report) error {
 	}
 
 	return nil
-}
-
-// exitError is a lightweight error type that carries an explicit exit code.
-// It is used by CLI commands that need to distinguish between validation
-// failures and internal errors.
-type exitError struct {
-	code int
-	msg  string
-}
-
-func (e *exitError) Error() string {
-	return e.msg
-}
-
-// ExitCode implements a small interface understood by main(), which prefers
-// explicit exit codes when available.
-func (e *exitError) ExitCode() int {
-	return e.code
-}
-
-func newExitError(code int, msg string) error {
-	return &exitError{code: code, msg: msg}
 }

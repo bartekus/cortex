@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -13,7 +14,7 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Feature: CLI_COMMAND_FEATURE
 // Spec: spec/cli/feature.md
-package commands
+package reports
 
 import (
 	"encoding/json"
@@ -22,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/bartekus/cortex/internal/reports/featuretrace"
+	"github.com/bartekus/cortex/internal/testutil/golden"
 )
 
 func TestRunFeatureTraceability_GeneratesReport(t *testing.T) {
@@ -244,11 +246,12 @@ package core
 	}
 	formatted = append(formatted, '\n') // Add trailing newline for consistency
 
+	testdataDir := golden.TestdataDir(t)
 	// Compare with golden file
-	expected := readGoldenFile(t, "feature_traceability_report")
+	expected := golden.Read(t, testdataDir, "reports_feature_traceability_report")
 
-	if *updateGolden {
-		writeGoldenFile(t, "feature_traceability_report", string(formatted))
+	if *golden.Update {
+		golden.Write(t, testdataDir, "reports_feature_traceability_report", string(formatted))
 		expected = string(formatted)
 	}
 

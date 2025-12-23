@@ -4,18 +4,14 @@ Usage:
   cortex [command]
 
 Available Commands:
-  commit      Generate commit health report
-  commit      Generate commit discipline suggestions
   completion  Generate the autocompletion script for the specified shell
   context     AI context pipeline commands
-  feature     Generate feature traceability report
   features    Manage feature dependency graphs and documentation
   gov         Governance checks for Cortex
   help        Help about any command
+  reports     Report generators for Cortex
   run         Orchestrate Cortex skills and governance checks
-  status      Show Cortex project status and roadmap analysis
   version     Print the version number of Cortex
-  xray        Run XRAY scan
 
 Flags:
   -h, --help      help for cortex

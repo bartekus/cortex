@@ -10,7 +10,7 @@ import (
 // Spec: spec/cli/features.md
 
 func TestCLICommandFeatures(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCmd()
 	b := bytes.NewBufferString("")
 	cmd.SetOut(b)
 	cmd.SetArgs([]string{"features", "--help"})

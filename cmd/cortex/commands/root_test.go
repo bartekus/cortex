@@ -18,7 +18,7 @@ func TestMain(m *testing.M) {
 
 func TestCortexHelp_Golden(t *testing.T) {
 	// 1. Init root command
-	cmd := NewRootCommand()
+	cmd := NewRootCmd()
 
 	// 2. Execute help
 	output, err := executeCommandForGolden(cmd, "--help")

@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -11,7 +12,7 @@ See https://www.gnu.org/licenses/ for license details.
 
 */
 
-package commands
+package reports
 
 import (
 	"fmt"
@@ -22,7 +23,6 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/bartekus/cortex/internal/featureindex"
-	"github.com/bartekus/cortex/internal/git"
 	"github.com/bartekus/cortex/internal/projectmeta"
 	"github.com/bartekus/cortex/internal/projectroot"
 	"github.com/bartekus/cortex/internal/reports"
@@ -32,12 +32,12 @@ import (
 // Feature: CLI_COMMAND_COMMIT
 // Spec: spec/cli/commit.md
 
-var newHistorySource = git.NewHistorySource
+var newHistorySource = NewHistorySource
 
 // NewCommitReportCommand returns the `cortex commit report` command.
 func NewCommitReportCommand() *cobra.Command {
 	cmd := &cobra.Command{
-		Use:   "commit report",
+		Use:   "commit-report",
 		Short: "Generate commit health report",
 		Long:  "Generates a commit health report analyzing commit message discipline",
 		RunE:  runCommitReport,

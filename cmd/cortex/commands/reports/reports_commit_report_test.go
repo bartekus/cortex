@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /*
-Cortex - Cortex is a Go-based CLI that orchestrates local-first development and scalable single-host to multi-host deployments for multi-service applications powered by Docker Compose.
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
 
 Copyright (C) 2025  Bartek Kus
 
@@ -13,7 +14,7 @@ See https://www.gnu.org/licenses/ for license details.
 
 // Feature: CLI_COMMAND_COMMIT
 // Spec: spec/cli/commit.md
-package commands
+package reports
 
 import (
 	"encoding/json"
@@ -23,6 +24,7 @@ import (
 
 	"github.com/bartekus/cortex/internal/reports"
 	"github.com/bartekus/cortex/internal/reports/commithealth"
+	"github.com/bartekus/cortex/internal/testutil/golden"
 )
 
 func TestRunCommitReport_GeneratesReport(t *testing.T) {
@@ -304,14 +306,6 @@ func TestRunCommitReport_CLIEndToEnd(t *testing.T) {
 	}
 }
 
-type fakeHistorySource struct {
-	commits []commithealth.CommitMetadata
-}
-
-func (f fakeHistorySource) Commits() ([]commithealth.CommitMetadata, error) {
-	return f.commits, nil
-}
-
 func TestRunCommitReport_GoldenFile(t *testing.T) {
 	t.Parallel()
 
@@ -352,10 +346,11 @@ func TestRunCommitReport_GoldenFile(t *testing.T) {
 	}
 	formatted = append(formatted, '\n')
 
-	expected := readGoldenFile(t, "commit_report")
+	testdataDir := golden.TestdataDir(t)
+	expected := golden.Read(t, testdataDir, "reports_commit_report")
 
-	if *updateGolden {
-		writeGoldenFile(t, "commit_report", string(formatted))
+	if *golden.Update {
+		golden.Write(t, testdataDir, "reports_commit_report", string(formatted))
 		expected = string(formatted)
 	}
 

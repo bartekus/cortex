@@ -10,7 +10,7 @@ import (
 // Spec: spec/cli/contract.md
 
 func TestCLIContract(t *testing.T) {
-	cmd := NewRootCommand()
+	cmd := NewRootCmd()
 	b := bytes.NewBufferString("")
 	cmd.SetOut(b)
 	cmd.SetArgs([]string{"--help"})
@@ -24,9 +24,12 @@ func TestCLIContract(t *testing.T) {
 
 	// Assert top-level commands that are part of the core contract
 	requiredCommands := []string{
-		"gov",
+		"completion",
 		"context",
 		"features",
+		"gov",
+		"reports",
+		"help",
 		"run",
 		"version",
 	}

@@ -1,14 +1,33 @@
+// SPDX-License-Identifier: AGPL-3.0-or-later
+
+/*
+Cortex - Cortex is a standalone governance and intelligence tool for AI-assisted software development.
+It analyzes repositories, enforces structural contracts, detects drift, and generates deterministic context artifacts that enable safe, auditable collaboration between humans and AI agents.
+
+Copyright (C) 2025  Bartek Kus
+
+This program is free software licensed under the terms of the GNU AGPL v3 or later.
+
+See https://www.gnu.org/licenses/ for license details.
+
+*/
+
 package commands
 
 import (
 	"fmt"
 	"os"
 
+	"github.com/bartekus/cortex/cmd/cortex/commands/reports"
 	"github.com/spf13/cobra"
+
+	"github.com/bartekus/cortex/cmd/cortex/commands/context"
+	"github.com/bartekus/cortex/cmd/cortex/commands/features"
+	"github.com/bartekus/cortex/cmd/cortex/commands/gov"
 )
 
-// NewRootCommand constructs the Cortex root Cobra command.
-func NewRootCommand() *cobra.Command {
+// NewRootCmd constructs the Cortex root Cobra command.
+func NewRootCmd() *cobra.Command {
 	version := os.Getenv("CORTEX_VERSION")
 	if version == "" {
 		version = "0.0.0-dev"
@@ -36,14 +55,10 @@ func NewRootCommand() *cobra.Command {
 
 	// Register existing context commands
 	// Note: We register NewContextCommand which provides subcommands like build, docs, xray.
-	cmd.AddCommand(NewContextCommand())
-	cmd.AddCommand(NewContextXrayCommand()) // Promoted to top-level
-	cmd.AddCommand(NewCommitReportCommand())
-	cmd.AddCommand(NewCommitSuggestCommand())
-	cmd.AddCommand(NewFeatureTraceabilityCommand())
-	cmd.AddCommand(NewGovCommand())
-	cmd.AddCommand(NewStatusCommand())
-	cmd.AddCommand(NewFeaturesCommand())
+	cmd.AddCommand(context.NewContextCommand())
+	cmd.AddCommand(features.NewFeaturesCommand())
+	cmd.AddCommand(reports.NewReportsCommand())
+	cmd.AddCommand(gov.NewGovCommand())
 	cmd.AddCommand(GetRunCmd())
 
 	return cmd
