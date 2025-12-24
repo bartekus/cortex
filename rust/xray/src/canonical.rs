@@ -67,7 +67,7 @@ pub fn validate_invariants(index: &XrayIndex) -> Result<()> {
         }
     }
 
-    // 2. Check module_files are strictly sorted
+    // 2. Check module_files are strictly sorted and unique
     for (i, window) in index.module_files.windows(2).enumerate() {
         if window[0] >= window[1] {
             if window[0] == window[1] {
@@ -97,6 +97,45 @@ pub fn validate_invariants(index: &XrayIndex) -> Result<()> {
             "Total size mismatch: computed={} vs stats.total_size={}",
             computed_size,
             index.stats.total_size
+        );
+    }
+
+    // 4. Validate Languages Aggregate
+    // Map MUST match exactly the counts from the files (excluding "Unknown").
+    let mut computed_langs: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    for f in &index.files {
+        if f.lang != "Unknown" {
+            *computed_langs.entry(f.lang.clone()).or_insert(0) += 1;
+        }
+    }
+    // Compare computed_langs vs index.languages
+    if computed_langs != index.languages {
+        anyhow::bail!(
+            "Languages aggregate mismatch. Computed from files: {:?}, stored: {:?}",
+            computed_langs,
+            index.languages
+        );
+    }
+
+    // 5. Validate Top Dirs Aggregate
+    // Map MUST match exactly the counts from the files.
+    // Logic: first segment before '/', else "."
+    let mut computed_top_dirs: std::collections::BTreeMap<String, usize> =
+        std::collections::BTreeMap::new();
+    for f in &index.files {
+        let top_dir = if let Some(idx) = f.path.find('/') {
+            f.path[..idx].to_string()
+        } else {
+            ".".to_string()
+        };
+        *computed_top_dirs.entry(top_dir).or_insert(0) += 1;
+    }
+    if computed_top_dirs != index.top_dirs {
+        anyhow::bail!(
+            "Top directories aggregate mismatch. Computed from files: {:?}, stored: {:?}",
+            computed_top_dirs,
+            index.top_dirs
         );
     }
 

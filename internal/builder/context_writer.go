@@ -2,6 +2,7 @@
 package builder
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"encoding/hex"
 	"encoding/json"
@@ -137,7 +138,7 @@ type Chunk struct {
 func isText(b []byte) bool {
 	// Basic null byte check + UTF8 validity
 	// XRAY does this too.
-	if strings.ContainsRune(string(b), 0) {
+	if bytes.IndexByte(b, 0) >= 0 {
 		return false
 	}
 	// Also use utf8.ValidString if we want to be strict

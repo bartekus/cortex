@@ -1,5 +1,5 @@
 use anyhow::{Context, Result};
-use std::fs::{self, File};
+use std::fs;
 use std::io::Write;
 use std::path::Path;
 
@@ -8,22 +8,27 @@ use std::path::Path;
 /// 1. Writes to path.tmp
 /// 2. Renames path.tmp -> path
 pub fn write_atomic(path: &Path, content: &[u8]) -> Result<()> {
-    if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).context("Failed to create parent directory")?;
-    }
-
-    let temp_path = path.with_extension("tmp");
-
     // Write to temp
-    {
-        let mut file = File::create(&temp_path).context("Failed to create temp file")?;
-        file.write_all(content)
-            .context("Failed to write content to temp file")?;
-        file.sync_all().context("Failed to sync temp file")?;
-    }
+    // Use `tempfile` crate to handle unique naming automatically.
+    // Pattern: <filename>.tmp.<random> in the same directory.
+    let dir = path.parent().unwrap_or_else(|| Path::new("."));
+    fs::create_dir_all(dir).context("Failed to create parent directory")?;
 
-    // Rename
-    fs::rename(&temp_path, path).context("Failed to rename temp file to target")?;
+    let mut temp = tempfile::Builder::new()
+        .prefix(&format!(
+            "{}.",
+            path.file_name().unwrap_or_default().to_string_lossy()
+        ))
+        .suffix(".tmp")
+        .tempfile_in(dir)
+        .context("Failed to create temp file")?;
+
+    temp.write_all(content)
+        .context("Failed to write content to temp file")?;
+    temp.flush().context("Failed to sync temp file")?;
+
+    // Persist (Atomic Rename)
+    temp.persist(path).context("Failed to persist file")?;
 
     Ok(())
 }
