@@ -55,8 +55,17 @@ func walkDir(root string, fn func(path string, info os.FileInfo) error) error {
 		}
 
 		if info.IsDir() {
-			// Skip hidden dirs, .git, and testdata
-			if strings.HasPrefix(name, ".") || name == "testdata" || name == ".git" {
+			// Skip hidden dirs, VCS dirs, and large dependency/output dirs
+			if strings.HasPrefix(name, ".") ||
+				name == ".git" ||
+				name == "testdata" ||
+				name == "node_modules" ||
+				name == "vendor" ||
+				name == "target" ||
+				name == "dist" ||
+				name == "build" ||
+				name == ".cortex" ||
+				name == "bin" {
 				continue
 			}
 			if err := walkDir(fullPath, fn); err != nil {
@@ -146,6 +155,8 @@ func extractFeatureIDFromFile(filePath string) (string, error) {
 	}()
 
 	scanner := bufio.NewScanner(f)
+	// Increase scanner buffer to handle large single-line files (minified assets, sourcemaps, etc).
+	scanner.Buffer(make([]byte, 64*1024), 2*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)

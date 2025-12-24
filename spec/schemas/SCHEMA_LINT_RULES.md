@@ -1,37 +1,47 @@
 # Schema Lint Rules
 
-These rules are enforced by `tests/harness/schema_lint.ts` to ensure strict determinism and valid caching headers across all MCP tool responses.
+The following rules are enforced by `tests/harness/schema_lint.ts` to ensure the correctness of the MCP tool schemas, specifically regarding hybrid coherence and cache safety.
 
-## 1. Response Structure
-Every response schema **MUST** be a `oneOf` object with exactly two top-level branches (unless it's a hybrid tool, see below):
-1.  **Success Branch**: An object definition for successful execution.
-2.  **Error Branch**: A `$ref` to `common.schema.json#/$defs/error`.
-
-## 2. Success Branch Requirements
-Every success branch object **MUST**:
-- Set `additionalProperties: false`.
-- Include `cache_key` (string).
-- Include `cache_hint` (const string).
-
-## 3. Cache Hint Contracts
-The value of `cache_hint` depends on the tool mode and branch:
-
-### Snapshot-Only Tools
-Tools that only operate on immutable snapshots (e.g., `snapshot.create`, `snapshot.info`).
-- **Structure**: `oneOf` [Success, Error]
-- **Success Branch**: `cache_hint: "immutable"`
+## 1. Branching Correctness
 
 ### Hybrid Tools
-Tools that support both `worktree` and `snapshot` modes (e.g., `snapshot.file`, `snapshot.list`, `snapshot.grep`, `snapshot.diff`, `snapshot.export`).
-- **Structure**: `oneOf` [WorktreeSuccess, SnapshotSuccess, Error]
-- **SnapshotSuccess Branch**:
-    - `cache_hint: "immutable"`
-- **WorktreeSuccess Branch**:
-    - `cache_hint: "until_dirty"`
-    - **MUST** include `lease_id`.
-    - **MUST** include `fingerprint`.
+Tools that support both `worktree` and `snapshot` modes must have a success response schema defined as a `oneOf` with exactly two branches:
+1.  **Immutable Branch**: Coincides with `snapshot` mode.
+2.  **Worktree Branch**: Coincides with `worktree` mode.
 
-## 4. Defs and Refs
-- All `$ref` usage must be local (relative paths within `spec/schemas`).
-- No external HTTP refs.
-- No `..` parent references outside the schemas directory.
+**Applicable Tools**:
+- `snapshot.list`
+- `snapshot.file`
+- `snapshot.grep`
+- `snapshot.diff`
+- `workspace.apply_patch` (returns snapshot_id or lease_id)
+
+### Snapshot-Only Tools
+Tools that produce strictly immutable outputs (or are pure functions of input) must have a single success branch.
+
+**Applicable Tools**:
+- `snapshot.create`
+- `snapshot.info`
+- `snapshot.export`
+- `snapshot.changes`
+
+## 2. Cache Hint Correctness
+
+Every success branch **MUST** include a `cache_hint` property that is a `const` string.
+
+- **Immutable Branch**: `cache_hint` MUST be `"immutable"`.
+- **Worktree Branch**: `cache_hint` MUST be `"until_dirty"`.
+
+## 3. Worktree Requirements
+
+The **Worktree Branch** of any hybrid tool response schema **MUST** include:
+- `lease_id` (string)
+- `fingerprint` (object ref)
+
+## 4. Error Enums
+
+The common error schema (`common.schema.json`) **MUST** include `STALE_LEASE` in the `code` enum.
+
+## 5. Runtime Enforcement
+
+The implementation **MUST** verify at runtime that the returned `cache_hint` matches the schema expectation for the active branch/mode.
