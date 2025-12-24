@@ -27,7 +27,7 @@ fs.mkdirSync(FIXTURES_DIR, { recursive: true });
 console.log("Running Schema Lint...");
 const SCHEMA_LINT_PATH = path.join(__dirname, 'schema_lint_test.ts');
 try {
-    execSync(`npx -y ts-node "${SCHEMA_LINT_PATH}"`, { stdio: 'inherit' });
+    execSync(`node --loader ts-node/esm "${SCHEMA_LINT_PATH}"`, { stdio: 'inherit' });
 } catch (e) {
     console.error("Schema lint failed.");
     process.exit(1);
