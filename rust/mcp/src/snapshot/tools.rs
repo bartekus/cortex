@@ -194,9 +194,9 @@ impl SnapshotTools {
             // If `snapshot_id` is missing in request, we can't look it up.
             // But `snapshot.list` arguments usually include `snapshot_id` if mode=snapshot.
             // I'll assume `snapshot_id` is passed.
-            return Err(anyhow!(
+            Err(anyhow!(
                 "Snapshot mode list not fully implemented without persistence"
-            ));
+            ))
         } else {
             Err(anyhow!("Invalid mode"))
         }

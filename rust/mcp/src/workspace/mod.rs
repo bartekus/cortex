@@ -188,9 +188,9 @@ impl WorkspaceTools {
             }
         } else if mode == "snapshot" {
             // Snapshot mode: In-memory patching not implemented
-            return Err(anyhow!("Snapshot mode patching not implemented"));
+            Err(anyhow!("Snapshot mode patching not implemented"))
         } else {
-            return Err(anyhow!("Invalid mode"));
+            Err(anyhow!("Invalid mode"))
         }
     }
 
