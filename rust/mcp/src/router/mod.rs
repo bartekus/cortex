@@ -188,6 +188,55 @@ impl Router {
                                 },
                                 "required": ["repo_root", "path", "lease_id"]
                             }
+                        },
+                        {
+                            "name": "snapshot.info",
+                            "description": "Get snapshot info (fingerprint)",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" }
+                                },
+                                "required": ["repo_root"]
+                            }
+                        },
+                        {
+                            "name": "snapshot.changes",
+                            "description": "Get changes",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
+                                },
+                                "required": ["repo_root"]
+                            }
+                        },
+                        {
+                            "name": "snapshot.diff",
+                            "description": "Get detailed diff",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
+                                    "lease_id": { "type": "string" }
+                                },
+                                "required": ["repo_root", "path", "mode"]
+                            }
+                        },
+                        {
+                            "name": "snapshot.export",
+                            "description": "Export snapshot",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
+                                },
+                                "required": ["repo_root", "snapshot_id"]
+                            }
                         }
                     ]
                 }),
@@ -269,14 +318,14 @@ impl Router {
                         });
 
                         if let Some(root) = repo_root {
-                            match self.snapshot_tools.create_snapshot(
+                            match self.snapshot_tools.snapshot_create(
                                 std::path::Path::new(root),
                                 lease_id.map(|s| s.to_string()),
                                 paths,
                             ) {
-                                Ok(sid) => json_rpc_ok(
+                                Ok(res) => json_rpc_ok(
                                     req.id.clone(),
-                                    json!({ "content": [{ "type": "json", "json": { "snapshot_id": sid } }] }),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
                                 Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
                             }
@@ -292,7 +341,7 @@ impl Router {
                         let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
 
                         if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
-                            match self.snapshot_tools.list_snapshot(
+                            match self.snapshot_tools.snapshot_list(
                                 std::path::Path::new(root),
                                 p,
                                 m,
@@ -317,22 +366,17 @@ impl Router {
                         let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
 
                         if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
-                            match self.snapshot_tools.read_file(
+                            match self.snapshot_tools.snapshot_file(
                                 std::path::Path::new(root),
                                 p,
                                 m,
                                 lease_id.map(|s| s.to_string()),
                                 snapshot_id.map(|s| s.to_string()),
                             ) {
-                                Ok(bytes) => {
-                                    // Encode base64
-                                    use base64::{engine::general_purpose, Engine as _};
-                                    let b64 = general_purpose::STANDARD.encode(bytes);
-                                    json_rpc_ok(
-                                        req.id.clone(),
-                                        json!({ "content": [{ "type": "json", "json": { "content": b64 } }] }),
-                                    )
-                                }
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }), // snapshot_file returns json value directly
+                                ),
                                 Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
                             }
                         } else {
@@ -342,7 +386,25 @@ impl Router {
                     "snapshot.grep" => {
                         let repo_root = args.get("repo_root").and_then(|s| s.as_str());
                         let pattern = args.get("pattern").and_then(|s| s.as_str());
-                        let path = args.get("path").and_then(|s| s.as_str()).unwrap_or(".");
+                        let paths = args.get("paths").and_then(|v| v.as_array()).map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        });
+                        let path_deprecated = args.get("path").and_then(|s| s.as_str());
+                        // Support legacy path arg? Or just paths array?
+                        // Tools logic supports `paths: Option<Vec<String>>`.
+                        // If path arg present, add to paths.
+                        let mut paths = paths;
+                        if let Some(p) = path_deprecated {
+                            if paths.is_none() {
+                                paths = Some(vec![]);
+                            }
+                            if let Some(ref mut v) = paths {
+                                v.push(p.to_string());
+                            }
+                        }
+
                         let mode = args.get("mode").and_then(|s| s.as_str());
                         let lease_id = args.get("lease_id").and_then(|s| s.as_str());
                         let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
@@ -352,25 +414,96 @@ impl Router {
                             .unwrap_or(false);
 
                         if let (Some(root), Some(pat), Some(m)) = (repo_root, pattern, mode) {
-                            match self.snapshot_tools.grep_snapshot(
+                            match self.snapshot_tools.snapshot_grep(
                                 std::path::Path::new(root),
                                 pat,
-                                path,
+                                paths,
                                 m,
                                 lease_id.map(|s| s.to_string()),
                                 snapshot_id.map(|s| s.to_string()),
                                 case_insensitive,
                             ) {
-                                Ok(res) => {
-                                    // Helper: convert (path, line, content) to objects
-                                    let matches: Vec<Value> = res.into_iter().map(|(p, l, c)| {
-                                         json!({ "file_path": p, "line_number": l, "content": c })
-                                     }).collect();
-                                    json_rpc_ok(
-                                        req.id.clone(),
-                                        json!({ "content": [{ "type": "json", "json": { "matches": matches } }] }),
-                                    )
-                                }
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "snapshot.info" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        if let Some(root) = repo_root {
+                            match self
+                                .snapshot_tools
+                                .snapshot_info(std::path::Path::new(root))
+                            {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
+                        }
+                    }
+                    "snapshot.changes" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+                        if let Some(root) = repo_root {
+                            match self.snapshot_tools.snapshot_changes(
+                                std::path::Path::new(root),
+                                snapshot_id.map(|s| s.to_string()),
+                            ) {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
+                        }
+                    }
+                    "snapshot.diff" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str());
+                        let mode = args.get("mode").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+
+                        if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
+                            match self.snapshot_tools.snapshot_diff(
+                                std::path::Path::new(root),
+                                p,
+                                m,
+                                lease_id.map(|s| s.to_string()),
+                            ) {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "snapshot.export" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+
+                        if let (Some(root), Some(sid)) = (repo_root, snapshot_id) {
+                            match self
+                                .snapshot_tools
+                                .snapshot_export(std::path::Path::new(root), Some(sid.to_string()))
+                            {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
                                 Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
                             }
                         } else {

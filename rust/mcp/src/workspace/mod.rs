@@ -92,47 +92,26 @@ impl WorkspaceTools {
         lease_id: Option<String>,
         _snapshot_id: Option<String>,
         strip: Option<usize>,
-        reject_on_conflict: bool,
+        _reject_on_conflict: bool,
         dry_run: bool,
     ) -> Result<serde_json::Value> {
-        // This returns a JSON object matching the schema
-        // (OneOf success worktree, success snapshot, or error)
-
         if mode == "worktree" {
             let lid = lease_id.ok_or_else(|| anyhow!("lease_id required"))?;
             self.lease_store.check_lease(&lid, repo_root)?;
 
-            // Apply patch to worktree using `git apply`.
-            // But we need to handle structured rejects and determinism.
-            // `git apply` supports `--reject` to emit .rej files, but we prefer not to litter.
-            // We want structured output.
-            // Maybe we use `patch` crate or parse diff manually?
-            // `git apply --check` first?
-
-            // The implementation plan specifies: "Unified diff format only. No fuzzing."
-            // `git apply --whitespace=fix?` No, strict `context lines must match`.
-
-            // We'll use `git apply`.
-            // If dry_run, use `--check`.
-
             let mut cmd = std::process::Command::new("git");
             cmd.arg("apply");
             cmd.arg("--verbose"); // To get details?
-                                  // --unidiff-zero?
-                                  // "No fuzzing" -> git apply defaults to some fuzz. --recount?
-                                  // There isn't a simple "no fuzz" flag in git apply without careful patch construction,
-                                  // but `git apply` usually is strict.
-                                  // We can check if it merges with offsets.
 
-            if reject_on_conflict {
-                // default behavior is fail on conflict.
-            }
+            // "No fuzzing": git apply has specific whitespace options but strict context usually default or --ignore-space-change.
+            // "byte-for-byte": default.
+            // "no fuzzing": technically `git apply` might fuzz. `--unidiff-zero`?
+            // To prevent fuzzing, we might need recent git version flags, but default is usually fine.
 
             if dry_run {
                 cmd.arg("--check");
             }
 
-            // Strip level
             if let Some(n) = strip {
                 cmd.arg(format!("-p{}", n));
             }
@@ -151,19 +130,13 @@ impl WorkspaceTools {
 
             let output = child.wait_with_output()?;
 
-            // If success, all applied.
             if output.status.success() {
-                // Touched files?
-                // We need to parse patch to know what matched.
-                // OR we rely on `git apply --verbose` output if it lists files?
-                // Or we parse the input patch for "+++ b/path".
-
+                // Touched files
                 let touched = parse_patch_touched_files(patch);
                 self.lease_store.touch_files(&lid, touched.clone());
 
-                // Return structured success
                 let new_fingerprint = Fingerprint::compute(repo_root)?;
-                // We need logic to return "applied" list.
+
                 let applied_value: Vec<serde_json::Value> = touched
                     .iter()
                     .map(|f| {
@@ -174,49 +147,48 @@ impl WorkspaceTools {
                     })
                     .collect();
 
-                return Ok(serde_json::json!({
+                Ok(serde_json::json!({
                     "applied": applied_value,
                     "rejects": [],
                     "lease_id": lid,
                     "fingerprint": new_fingerprint,
                     "cache_key": format!("{}:{}", lid, new_fingerprint.status_hash),
                     "cache_hint": "until_dirty"
-                }));
+                }))
             } else {
                 // Parse reject reasons.
-                // Git apply output on failure usually says "error: patch failed: file:line..."
-                // We map this to structured rejects.
+                // Assuming simple failure means "whole patch rejected" or specific hunks?
+                // Git apply fails atomically usually.
                 let stderr = String::from_utf8_lossy(&output.stderr);
-                // TODO: Parse stderr for structured rejects.
-                // For now, return generic error or empty applies and populated rejects?
-                // If whole patch failed, nothing applied (atomic).
 
-                return Err(anyhow!("Patch failed: {}", stderr));
+                // Return errors as structured rejects if possible?
+                // Or just fail.
+                // Spec allows returning "rejects" list in Success response (if partial assert allowed?)
+                // Schema has "rejects" field.
+                // But if `git apply` fails (exit 1), nothing changed.
+                // So "applied": []
+                // "rejects": [ ... ]
+
+                // We fake a "conflict" reject for all touched paths?
+                // Or parse "error: patch failed: file:line".
+
+                let rejects = parse_git_apply_errors(&stderr, patch);
+
+                Ok(serde_json::json!({
+                    "applied": [],
+                    "rejects": rejects,
+                    "lease_id": lid,
+                    "fingerprint": Fingerprint::compute(repo_root)?, // State didn't change ideally
+                    "cache_key": "conflict",
+                    "cache_hint": "until_dirty"
+                }))
             }
         } else if mode == "snapshot" {
-            // In-memory patch application on snapshot blobs!
-            // Load manifest. For each file in patch:
-            // 1. Get blob.
-            // 2. Apply hunk.
-            // 3. Store new blob.
-            // 4. Update manifest.
-            // 5. Create new snapshot.
-
-            // This is complex to implement fully in one step without a diff library.
-            // `bdiff` or `patch-rs`?
-            // Given limitations, maybe we assume `snapshot` mode patching is OUT OF SCOPE for this turn
-            // unless I have a library.
-            // Implementation plan says: "workspace.apply_patch... mode=snapshot: Applies patch against the snapshot's stored bytes".
-
-            // I will stub this with "Not implemented" or simple replacement if trivial?
-            // Patch application is non-trivial.
-            // I recall standard library doesn't have it.
-            // I'll return error for now: "Snapshot patching not supported in this iteration".
-
-            return Err(anyhow!("Snapshot mode patching not yet implemented"));
+            // Snapshot mode: In-memory patching not implemented
+            return Err(anyhow!("Snapshot mode patching not implemented"));
+        } else {
+            return Err(anyhow!("Invalid mode"));
         }
-
-        Err(anyhow!("Invalid mode"))
     }
 
     pub fn write_file(
@@ -231,17 +203,13 @@ impl WorkspaceTools {
         let lid = lease_id.ok_or_else(|| anyhow!("lease_id required"))?;
         self.lease_store.check_lease(&lid, repo_root)?;
 
-        // Resolve path strict
-        // We use our helper resolve_target_path
         let target = self.resolve_target_path(repo_root, path)?;
 
-        // Decode content
         use base64::{engine::general_purpose, Engine as _};
         let content = general_purpose::STANDARD
             .decode(content_base64)
             .context("Invalid base64 content")?;
 
-        // Check dirs
         if let Some(parent) = target.parent() {
             if !parent.exists() {
                 if create_dirs {
@@ -258,7 +226,6 @@ impl WorkspaceTools {
 
         if !dry_run {
             std::fs::write(&target, content)?;
-            // Touch
             self.lease_store.touch_files(&lid, vec![path.to_string()]);
         }
 
@@ -273,7 +240,7 @@ impl WorkspaceTools {
         dry_run: bool,
     ) -> Result<bool> {
         let lid = lease_id.ok_or_else(|| anyhow!("lease_id required"))?;
-        self.lease_store.check_lease(&lid, repo_root)?;
+        self.lease_store.check_lease(&lid, repo_root)?; // Verify at start
 
         let target = self.resolve_target_path(repo_root, path)?;
 
@@ -287,7 +254,6 @@ impl WorkspaceTools {
             } else {
                 std::fs::remove_file(&target)?;
             }
-            // Touch? If we deleted it, it changed.
             self.lease_store.touch_files(&lid, vec![path.to_string()]);
         }
 
@@ -295,29 +261,56 @@ impl WorkspaceTools {
     }
 }
 
-// Helper to extract file paths from unified diff
-// Matches "+++ b/path/to/file"
+// Helpers
+
 fn parse_patch_touched_files(patch: &str) -> Vec<String> {
     let mut files = Vec::new();
     for line in patch.lines() {
         if line.starts_with("+++ ") {
-            // usually "+++ b/path" or "+++ path"
-            // Try to strip prefix b/ or a/?
-            // Typical git diff: "--- a/foo\n+++ b/foo"
-            // path is "foo".
-            // We look for b/
             let path_part = line.trim_start_matches("+++ ").trim();
-            // naive stripping of b/ if present
+            // strip 'b/' or 'a/'? git diff is a/ b/
+            // Usually destination is b/
             let clean_path = if let Some(stripped) = path_part.strip_prefix("b/") {
                 stripped
             } else {
                 path_part
             };
-            // Handle /dev/null for deletions?
             if clean_path != "/dev/null" {
                 files.push(clean_path.to_string());
             }
         }
     }
     files
+}
+
+fn parse_git_apply_errors(stderr: &str, patch: &str) -> Vec<serde_json::Value> {
+    // Parse "error: patch failed: <file>:<line>"
+    // Return structured rejects
+    let mut rejects = Vec::new();
+    // Simplified parsing
+    for line in stderr.lines() {
+        if let Some(part) = line.strip_prefix("error: patch failed: ") {
+            let parts: Vec<&str> = part.split(':').collect();
+            if parts.len() >= 2 {
+                let file = parts[0];
+                rejects.push(serde_json::json!({
+                    "path": file,
+                    "hunks": [{ "index": 0, "reason": "context_mismatch" }] // Dummy index/reason
+                }));
+            }
+        }
+    }
+
+    // Fallback if no specific failure found but status failed
+    if rejects.is_empty() {
+        // Mark all touched as rejected?
+        let touched = parse_patch_touched_files(patch);
+        for f in touched {
+            rejects.push(serde_json::json!({
+                "path": f,
+                "hunks": [{ "index": 0, "reason": "unknown_failure" }]
+            }));
+        }
+    }
+    rejects
 }

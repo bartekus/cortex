@@ -1,65 +1,43 @@
-
 import * as fs from 'fs';
 import * as path from 'path';
 import { execSync } from 'child_process';
 
-const FIXTURES_DIR = path.resolve(process.cwd(), 'tests/fixtures/repos');
-const REPO_NAME = 'toy-repo-01';
-const REPO_PATH = path.join(FIXTURES_DIR, REPO_NAME);
+export class RepoSetup {
+    repoPath: string;
 
-// Ensure clean slate
-if (fs.existsSync(REPO_PATH)) {
-    fs.rmSync(REPO_PATH, { recursive: true, force: true });
-}
-fs.mkdirSync(REPO_PATH, { recursive: true });
+    constructor(baseDir: string, name: string) {
+        this.repoPath = path.join(baseDir, name);
+    }
 
+    // Initialize a deterministic repo
+    init() {
+        if (fs.existsSync(this.repoPath)) {
+            fs.rmSync(this.repoPath, { recursive: true, force: true });
+        }
+        fs.mkdirSync(this.repoPath, { recursive: true });
 
-function exec(cmd: string, cwd: string = REPO_PATH) {
-    try {
-        execSync(cmd, { cwd, stdio: 'pipe' });
-    } catch (e: any) {
-        console.error(`Command failed: ${cmd}`);
-        if (e.stdout) console.error(`stdout: ${e.stdout.toString()}`);
-        if (e.stderr) console.error(`stderr: ${e.stderr.toString()}`);
-        throw e;
+        this.git('init');
+        // Configure user
+        this.git('config user.name "Test User"');
+        this.git('config user.email "test@example.com"');
+        this.git('config commit.gpgsign false');
+        // Deterministic dates?
+        // We can force dates in commit env vars
+    }
+
+    git(args: string) {
+        execSync(`git ${args}`, { cwd: this.repoPath, stdio: 'pipe' }); // Pipe or ignore to reduce noise
+    }
+
+    commit(msg: string, date: string = "2024-01-01T00:00:00Z") {
+        // GIT_AUTHOR_DATE, GIT_COMMITTER_DATE
+        const env = { ...process.env, GIT_AUTHOR_DATE: date, GIT_COMMITTER_DATE: date };
+        execSync(`git commit -m "${msg}"`, { cwd: this.repoPath, env, stdio: 'pipe' });
+    }
+
+    writeFile(relPath: string, content: string) {
+        const p = path.join(this.repoPath, relPath);
+        fs.mkdirSync(path.dirname(p), { recursive: true });
+        fs.writeFileSync(p, content);
     }
 }
-
-console.log(`Creating deterministic repo at ${REPO_PATH}`);
-
-// Initialize Git
-exec('git init');
-exec('git config user.name "Toy Robot"');
-exec('git config user.email "toy@robot.com"');
-exec('git config init.defaultBranch main'); // Force main
-
-// Initial Commit
-fs.writeFileSync(path.join(REPO_PATH, 'README.md'), '# Toy Repo 01\n');
-exec('git add README.md');
-exec('git commit -m "Initial commit"');
-
-// Generate Deterministic Data
-// ...
-
-// Add some structure
-fs.mkdirSync(path.join(REPO_PATH, 'src'));
-fs.writeFileSync(path.join(REPO_PATH, 'src/main.rs'), 'fn main() {\n    println!("Hello");\n}\n');
-fs.writeFileSync(path.join(REPO_PATH, 'src/utils.rs'), 'pub fn help() {}\n');
-exec('git add src');
-exec('git commit -m "Add source code"');
-
-// Create a branch
-exec('git checkout -b feature/a');
-fs.writeFileSync(path.join(REPO_PATH, 'src/feature.rs'), '// Feature A\n');
-exec('git add src/feature.rs');
-exec('git commit -m "Add feature A"');
-
-// Back to main
-exec('git checkout main');
-
-// Create a Tag
-exec('git tag v0.1.0');
-
-// Log the state
-const head = execSync('git rev-parse HEAD', { cwd: REPO_PATH }).toString().trim();
-console.log(`Repo created. HEAD: ${head}`);

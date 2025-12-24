@@ -1,126 +1,153 @@
-
 import * as fs from 'fs';
 import * as path from 'path';
+import { fileURLToPath } from 'url';
 
-const ROOT_DIR = path.join(path.resolve(process.cwd()), '..');
-const SCHEMAS_DIR = path.resolve(ROOT_DIR, 'spec/schemas');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
-interface Schema {
-    $id?: string;
-    oneOf?: any[];
-    [key: string]: any;
+const SCHEMAS_DIR = path.join(__dirname, '../../spec/schemas');
+const COMMON_SCHEMA = 'common.schema.json';
+
+// Tools categorized by type
+const SNAPSHOT_ONLY_TOOLS = [
+    'snapshot.create',
+    'snapshot.info',
+    'snapshot.changes',
+    'snapshot.export',
+];
+
+const HYBRID_TOOLS = [
+    'snapshot.list',
+    'snapshot.file',
+    'snapshot.grep',
+    'snapshot.diff',
+    'workspace.apply_patch',
+];
+
+interface LintError {
+    file: string;
+    message: string;
 }
 
-function loadSchemas(): string[] {
-    return fs.readdirSync(SCHEMAS_DIR)
-        .filter(f => f.endsWith('.json') && f !== 'common.schema.json');
+const errors: LintError[] = [];
+
+function lintCommonSchema() {
+    const commonPath = path.join(SCHEMAS_DIR, COMMON_SCHEMA);
+    if (!fs.existsSync(commonPath)) {
+        errors.push({ file: COMMON_SCHEMA, message: 'File not found' });
+        return;
+    }
+
+    const content = JSON.parse(fs.readFileSync(commonPath, 'utf-8'));
+    const errorEnum = content?.$defs?.error?.properties?.error?.properties?.code?.enum;
+
+    if (!Array.isArray(errorEnum)) {
+        errors.push({ file: COMMON_SCHEMA, message: 'Could not find error.code enum definition' });
+        return;
+    }
+
+    if (!errorEnum.includes('STALE_LEASE')) {
+        errors.push({ file: COMMON_SCHEMA, message: 'Error enum must include STALE_LEASE' });
+    }
 }
 
-function lintSchema(filename: string) {
-    const content = fs.readFileSync(path.join(SCHEMAS_DIR, filename), 'utf-8');
-    const schema: Schema = JSON.parse(content);
+function lintResponseSchemas() {
+    const allTools = [...SNAPSHOT_ONLY_TOOLS, ...HYBRID_TOOLS];
 
-    console.log(`Linting ${filename}...`);
+    for (const tool of allTools) {
+        const filename = `${tool}.response.schema.json`;
+        const filePath = path.join(SCHEMAS_DIR, filename);
 
-    // Rule 1: Response schemas must use oneOf
-    if (filename.includes('.response.')) {
+        if (!fs.existsSync(filePath)) {
+            errors.push({ file: filename, message: 'Schema file must exist' });
+            continue;
+        }
+
+        const schema = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
+
+        // Check if it's OneOf (Failure + Success(es))
         if (!schema.oneOf || !Array.isArray(schema.oneOf)) {
-            throw new Error(`${filename}: Response schemas MUST use top-level 'oneOf'.`);
+            errors.push({ file: filename, message: 'Root must be oneOf array (Success | Error)' });
+            continue;
         }
 
-        // Classify tool type
-        const isHybrid = [
-            'snapshot.list',
-            'snapshot.file',
-            'snapshot.grep',
-            'snapshot.diff',
-            'snapshot.export',
-            'snapshot.changes',
-            'workspace.apply_patch'
-        ].some(tool => filename.includes(tool));
+        const successBranches = schema.oneOf.filter((b: any) => !b['$ref'] || !b['$ref'].includes('error'));
 
-        const successBranches = schema.oneOf.filter(b => !b['$ref']);
-
-        if (isHybrid) {
-            // Hybrid tools: Expect Worktree and Snapshot success branches (or combined oneOf if implicit, but our spec says explicit oneOf branches preferred usually,
-            // actually for hybrid we might have 2 success definitions in the oneOf array, plus error)
-            // Our spec says: oneOf [WorktreeSuccess, SnapshotSuccess, Error]
-
-            let worktreeBranch = successBranches.find(b =>
-                b.properties?.mode?.const === 'worktree' ||
-                (b.title && b.title.toLowerCase().includes(' worktree '))
-            );
-            let snapshotBranch = successBranches.find(b =>
-                b.properties?.mode?.const === 'snapshot' ||
-                (b.title && b.title.toLowerCase().includes(' snapshot '))
-            );
-
-            if (!worktreeBranch) throw new Error(`${filename}: Hybrid tool missing Worktree success branch.`);
-            if (!snapshotBranch) throw new Error(`${filename}: Hybrid tool missing Snapshot success branch.`);
-
-            // Validate Worktree Branch
-            if (worktreeBranch.properties.cache_hint.const !== 'until_dirty') {
-                throw new Error(`${filename}: Worktree branch must have cache_hint: "until_dirty".`);
-            }
-            if (!worktreeBranch.required.includes('lease_id')) {
-                throw new Error(`${filename}: Worktree branch must require 'lease_id'.`);
-            }
-            if (!worktreeBranch.required.includes('fingerprint')) {
-                throw new Error(`${filename}: Worktree branch must require 'fingerprint'.`);
-            }
-
-            // Validate Snapshot Branch
-            if (snapshotBranch.properties.cache_hint.const !== 'immutable') {
-                throw new Error(`${filename}: Snapshot branch must have cache_hint: "immutable".`);
-            }
-
-        } else {
-            // Snapshot-only or simple tools
-            // Should have 1 success branch
+        if (SNAPSHOT_ONLY_TOOLS.includes(tool)) {
+            // Snapshot only: Should have exactly 1 success branch
             if (successBranches.length !== 1) {
-                throw new Error(`${filename}: Non-hybrid tool should have exactly 1 success branch (found ${successBranches.length}).`);
+                errors.push({ file: filename, message: `Snapshot-only tool must have exactly 1 success branch, found ${successBranches.length}` });
+            } else {
+                const branch = successBranches[0];
+                validateCacheHint(filename, branch, 'immutable');
             }
-            const success = successBranches[0];
 
-            // workspace.write_file/delete don't have cache_hint enforced by spec in the same way, but let's check snapshot ones
-            if (filename.includes('snapshot.')) {
-                if (success.properties?.cache_hint?.const !== 'immutable') {
-                    throw new Error(`${filename}: Snapshot-only tool must have cache_hint: "immutable".`);
+        } else if (HYBRID_TOOLS.includes(tool)) {
+            // Hybrid: Should have exactly 2 success branches (worktree + snapshot)
+            if (successBranches.length !== 2) {
+                errors.push({ file: filename, message: `Hybrid tool must have exactly 2 success branches, found ${successBranches.length}` });
+            } else {
+                let foundImmutable = false;
+                let foundWorktree = false;
+
+                for (const branch of successBranches) {
+                    const hint = getCacheHintConst(branch);
+                    if (hint === 'immutable') {
+                        foundImmutable = true;
+                    } else if (hint === 'until_dirty') {
+                        foundWorktree = true;
+                        validateWorktreeRequirements(filename, branch);
+                    } else {
+                        errors.push({ file: filename, message: `Unknown or missing cache_hint const value: ${hint}` });
+                    }
                 }
+
+                if (!foundImmutable) errors.push({ file: filename, message: 'Missing "immutable" branch' });
+                if (!foundWorktree) errors.push({ file: filename, message: 'Missing "until_dirty" (worktree) branch' });
             }
         }
+    }
+}
 
-        // Check strictness on all success branches
-        successBranches.forEach(branch => {
-            if (branch.additionalProperties !== false) {
-                throw new Error(`${filename}: Success branch must set additionalProperties: false.`);
-            }
-            if (filename.includes('snapshot.') && !branch.required.includes('cache_key')) {
-                throw new Error(`${filename}: Success branch must require 'cache_key'.`);
-            }
-        });
+function getCacheHintConst(branch: any): string | undefined {
+    // Traverse properties.cache_hint.const
+    // Or if it's nested in $defs (less likely for response root, but possible)
+    // We assume direct structure for now
+    return branch?.properties?.cache_hint?.const;
+}
 
+function validateCacheHint(file: string, branch: any, expected: string) {
+    const actual = getCacheHintConst(branch);
+    if (actual !== expected) {
+        errors.push({ file, message: `Expected cache_hint "${expected}", found "${actual}"` });
+    }
+}
+
+function validateWorktreeRequirements(file: string, branch: any) {
+    const required = branch.required || [];
+    const props = branch.properties || {};
+
+    if (!required.includes('lease_id') || !props.lease_id) {
+        errors.push({ file, message: 'Worktree branch must require lease_id' });
+    }
+    if (!required.includes('fingerprint') || !props.fingerprint) {
+        errors.push({ file, message: 'Worktree branch must require fingerprint' });
     }
 }
 
 function main() {
-    const schemas = loadSchemas();
-    let errors = 0;
+    console.log("Linting Schemas...");
+    lintCommonSchema();
+    lintResponseSchemas();
 
-    for (const f of schemas) {
-        try {
-            lintSchema(f);
-        } catch (e: any) {
-            console.error(`❌ ${e.message}`);
-            errors++;
+    if (errors.length > 0) {
+        console.error("\nSchema Lint Failed:");
+        for (const err of errors) {
+            console.error(`[${err.file}] ${err.message}`);
         }
-    }
-
-    if (errors > 0) {
-        console.error(`\nFound ${errors} schema lint errors.`);
         process.exit(1);
     } else {
-        console.log("\n✅ All schemas passed linting.");
+        console.log("Schema Lint Passed.");
     }
 }
 

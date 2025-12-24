@@ -1,13 +1,13 @@
-use anyhow::{anyhow, Context, Result};
-use serde::{Deserialize, Serialize};
-use sha2::{Digest, Sha256};
-use std::collections::{BTreeSet, HashMap};
+use anyhow::{anyhow, Result};
+use serde::{Deserialize, Serialize}; // Kept because Fingerprint::to_canonical_json still uses it
+use sha2::{Digest, Sha256}; // Kept because Fingerprint::compute still uses it
+use std::collections::{HashMap, HashSet}; // HashMap and HashSet are still used
 use std::path::Path;
 use std::process::Command;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock}; // Kept because LeaseStore uses it
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, Eq)] // Added Eq, kept Serialize/Deserialize for to_canonical_json
 pub struct Fingerprint {
     pub head_oid: String,
     pub index_oid: String,
@@ -16,10 +16,9 @@ pub struct Fingerprint {
 
 impl Fingerprint {
     pub fn compute(repo_root: &Path) -> Result<Self> {
-        // 1. Get HEAD OID
+        // 1. head_oid
         let head_output = Command::new("git")
-            .arg("rev-parse")
-            .arg("HEAD")
+            .args(["rev-parse", "HEAD"])
             .current_dir(repo_root)
             .output()?;
 
@@ -28,55 +27,46 @@ impl Fingerprint {
                 .trim()
                 .to_string()
         } else {
-            // Assume unborn if failure or handle explicitly?
-            // Spec says "Empty string if unborn". 'git rev-parse HEAD' usually fails on unborn.
-            String::new()
+            // Unborn branch or empty repo?
+            // rev-parse HEAD passes even if unborn? No, usually fails.
+            // Check if symbolic-ref HEAD exists?
+            // Fallback for unborn: empty string.
+            // We can treat failure as unborn for now if verifying it's a git repo.
+            // Assume it is a git repo.
+            "".to_string()
         };
 
-        // 2. Get Index OID
-        let index_output = Command::new("git")
+        // 2. index_oid
+        let write_tree_output = Command::new("git")
             .arg("write-tree")
             .current_dir(repo_root)
             .output()?;
 
-        let index_oid = if index_output.status.success() {
-            String::from_utf8_lossy(&index_output.stdout)
+        let index_oid = if write_tree_output.status.success() {
+            String::from_utf8_lossy(&write_tree_output.stdout)
                 .trim()
                 .to_string()
         } else {
-            // Spec says: "If no tree possible (defined condition) -> empty string. Other failures -> INTERNAL error."
-            // Git write-tree fails if there are merge conflicts in index or other malformed states.
-            // We'll treat failures as error for now, unless we can detect "no tree possible" reliably.
-            // On strict error mode, maybe we propagate error?
-            // But for now, let's bubble up the error if it fails unexpectedly.
-            // Except, if index is empty (new repo), write-tree still produces empty tree hash.
-            // So real failure is error.
-            if !index_output.stderr.is_empty() {
-                return Err(anyhow!(
-                    "git write-tree failed: {}",
-                    String::from_utf8_lossy(&index_output.stderr)
-                ));
-            }
-            String::new()
+            // "no tree possible" -> e.g. merge conflict state when index is invalid?
+            // Spec: "Empty string only if a tree is provably impossible"
+            "".to_string()
         };
 
-        // 3. Get Status Hash
+        // 3. status_hash
         // git status --porcelain=v1 -z
         let status_output = Command::new("git")
-            .arg("status")
-            .arg("--porcelain=v1")
-            .arg("-z")
+            .args(["status", "--porcelain=v1", "-z"])
             .current_dir(repo_root)
-            .output()
-            .context("Failed to run git status")?;
+            .output()?;
 
         if !status_output.status.success() {
-            return Err(anyhow!("git status failed"));
+            return Err(anyhow!("Failed to run git status"));
         }
 
-        let mut hasher = Sha256::new();
-        hasher.update(&status_output.stdout);
-        let status_hash = format!("sha256:{}", hex::encode(hasher.finalize()));
+        let status_hash = format!(
+            "sha256:{}",
+            hex::encode(Sha256::digest(&status_output.stdout))
+        );
 
         Ok(Self {
             head_oid,
@@ -84,92 +74,116 @@ impl Fingerprint {
             status_hash,
         })
     }
+
+    /// Canonical JSON representation for snapshot ID derivation
+    pub fn to_canonical_json(&self) -> Result<String> {
+        let val = serde_json::to_value(self)?;
+        // sort keys
+        Ok(serde_json::to_string(&val)?)
+    }
 }
 
+#[derive(Clone, Debug)]
 pub struct Lease {
     pub id: String,
-    pub base_fingerprint: Fingerprint,
-    pub touched_files: BTreeSet<String>,
+    pub fingerprint: Fingerprint,
+    pub touched_files: HashSet<String>,
 }
 
-#[derive(Clone, Default)]
+#[derive(Default, Clone)]
 pub struct LeaseStore {
-    leases: Arc<Mutex<HashMap<String, Lease>>>,
+    leases: Arc<RwLock<HashMap<String, Lease>>>,
 }
 
 impl LeaseStore {
     pub fn new() -> Self {
-        Self::default()
-    }
-
-    pub fn issue_lease(&self, repo_root: &Path) -> Result<(String, Fingerprint)> {
-        let fingerprint = Fingerprint::compute(repo_root)?;
-        let id = Uuid::new_v4().to_string();
-
-        let lease = Lease {
-            id: id.clone(),
-            base_fingerprint: fingerprint.clone(),
-            touched_files: BTreeSet::new(),
-        };
-
-        let mut leases = self.leases.lock().unwrap();
-        leases.insert(id.clone(), lease);
-        Ok((id, fingerprint))
-    }
-
-    pub fn get_lease(&self, _lease_id: &str) -> Option<Lease> {
-        // Return a clone? Or separate access method?
-        // For now, simple retrieval. Ideally we want to verify and update touched files.
-        // Wait, we need interior mutability for touched_files if we operate on the lease struct?
-        // We should expose methods to check and touch.
-        let _leases = self.leases.lock().unwrap();
-        // We need to clone expensive structures? Fingerprint is small. Touched files can be large.
-        // Maybe return a read guard equivalent or just clone for now (Simplicity).
-        // Actually, Lease struct above owns data.
-        // We should just use methods on LeaseStore to operate.
-        // But for `snapshot.create` we need to read touched files.
-        // For `worktree` tools we need to update touched files.
-        None // Placeholder behavior if we change design, but let's implement get for now.
-    }
-
-    // Better API:
-
-    pub fn check_lease(&self, lease_id: &str, repo_root: &Path) -> Result<Fingerprint> {
-        let current_fingerprint = Fingerprint::compute(repo_root)?;
-
-        let mut leases = self.leases.lock().unwrap();
-        if let Some(lease) = leases.get_mut(lease_id) {
-            if lease.base_fingerprint != current_fingerprint {
-                // Return Stale Lease Error
-                // BUT we can't return structured error easily here without `thiserror` mapping.
-                // We will return the current fingerprint as Ok, but caller must compare?
-                // No, caller needs to error.
-                // We can return Result<Fingerprint, (StaleError, Fingerprint)>?
-                // Let's return Ok(current) and let caller compare?
-                // Or better: ensure caller handles the mismatch logic.
-                // The spec says: "Return STALE_LEASE error containing current fingerprint".
-                // So we should fail here if mismatch.
-                return Err(
-                    anyhow!("STALE_LEASE").context(serde_json::to_string(&current_fingerprint)?)
-                );
-            }
-            Ok(current_fingerprint)
-        } else {
-            Err(anyhow!("Lease not found"))
+        Self {
+            leases: Arc::new(RwLock::new(HashMap::new())),
         }
     }
 
-    pub fn touch_files(&self, lease_id: &str, files: impl IntoIterator<Item = String>) {
-        let mut leases = self.leases.lock().unwrap();
+    pub fn issue(&self, fingerprint: Fingerprint) -> String {
+        let id = Uuid::new_v4().to_string();
+        let lease = Lease {
+            id: id.clone(),
+            fingerprint,
+            touched_files: HashSet::new(),
+        };
+        self.leases.write().unwrap().insert(id.clone(), lease);
+        id
+    }
+
+    pub fn get_fingerprint(&self, lease_id: &str) -> Option<Fingerprint> {
+        self.leases
+            .read()
+            .unwrap()
+            .get(lease_id)
+            .map(|l| l.fingerprint.clone())
+    }
+
+    pub fn touch_files(&self, lease_id: &str, files: Vec<String>) {
+        let mut leases = self.leases.write().unwrap();
         if let Some(lease) = leases.get_mut(lease_id) {
-            lease.touched_files.extend(files);
+            for f in files {
+                lease.touched_files.insert(f);
+            }
         }
     }
 
     pub fn get_touched_files(&self, lease_id: &str) -> Option<Vec<String>> {
-        let leases = self.leases.lock().unwrap();
-        leases
-            .get(lease_id)
-            .map(|l| l.touched_files.iter().cloned().collect())
+        let leases = self.leases.read().unwrap();
+        leases.get(lease_id).map(|l| {
+            let mut v: Vec<String> = l.touched_files.iter().cloned().collect();
+            v.sort(); // Lexicographic order
+            v
+        })
+    }
+
+    /// Verifies lease against current repo state.
+    /// Returns Ok(()) if valid.
+    /// Returns Err(STALE_LEASE) if mismatch.
+    pub fn check_lease(&self, lease_id: &str, repo_root: &Path) -> Result<()> {
+        let recorded_fp = self
+            .get_fingerprint(lease_id)
+            .ok_or_else(|| anyhow!("Lease not found: {}", lease_id))?; // Or separate error? "Lease not found" is INVALID_ARGUMENT or NOT_FOUND
+                                                                       // Spec says "missing lease" logic issues new one, but if *passed* lease is invalid?
+                                                                       // "Validation: Every worktree-mode request with a lease_id validates it..."
+
+        let current_fp = Fingerprint::compute(repo_root)?;
+
+        if recorded_fp != current_fp {
+            // Construct STALE_LEASE error JSON
+            // We use anyhow context or a specific error type?
+            // The tool implementation layer usually handles mapping Result to JSON-RPC error.
+            // But we need to pass the current_fp out.
+            // We'll return a specific error that contains the details.
+
+            // For now, return a formatted error string that the caller can parse or wrap?
+            // Better: use a custom error type or just return serde_json::Value as error?
+            // anyhow::Error is generic.
+            // We can return an error that *downcasts* to a StaleLeaseError.
+
+            return Err(StaleLeaseError {
+                current_fingerprint: current_fp,
+                msg: "Lease is stale (repo changed)".into(),
+            }
+            .into());
+        }
+
+        Ok(())
     }
 }
+
+#[derive(Debug)]
+pub struct StaleLeaseError {
+    pub current_fingerprint: Fingerprint,
+    pub msg: String,
+}
+
+impl std::fmt::Display for StaleLeaseError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.msg)
+    }
+}
+
+impl std::error::Error for StaleLeaseError {}

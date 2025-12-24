@@ -1,81 +1,128 @@
-use anyhow::{Context, Result};
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, RwLock};
 
-/// A content-addressed store for file blobs.
-/// In a real implementation this might be backed by disk or DB, keeping it in-memory for now
-/// as per the "work-with-app" scope, or maybe we just reference git blobs?
-/// For the "snapshot" tool, creating a self-contained snapshot often implies stashing the content
-/// aside from the worktree so it remains immutable even if worktree changes.
-/// We'll use an in-memory map for the `v1` scope.
 #[derive(Clone, Default)]
 pub struct BlobStore {
-    blobs: Arc<Mutex<HashMap<String, Vec<u8>>>>,
+    blobs: Arc<RwLock<HashMap<String, Vec<u8>>>>,
+    snapshots: Arc<RwLock<HashMap<String, Vec<u8>>>>, // Map snapshot_id -> manifest bytes match
 }
 
 impl BlobStore {
     pub fn new() -> Self {
-        Self::default()
+        Self {
+            blobs: Arc::new(RwLock::new(HashMap::new())),
+            snapshots: Arc::new(RwLock::new(HashMap::new())),
+        }
     }
 
-    pub fn put(&self, content: &[u8]) -> String {
-        let mut hasher = Sha256::new();
-        hasher.update(content);
-        let hash = format!("sha256:{}", hex::encode(hasher.finalize()));
-
-        let mut blobs = self.blobs.lock().unwrap();
-        blobs
-            .entry(hash.clone())
-            .or_insert_with(|| content.to_vec());
+    pub fn put(&self, data: &[u8]) -> String {
+        let hash = format!("sha256:{}", hex::encode(Sha256::digest(data)));
+        let mut blobs = self.blobs.write().unwrap();
+        blobs.insert(hash.clone(), data.to_vec());
         hash
     }
 
     pub fn get(&self, hash: &str) -> Option<Vec<u8>> {
-        let blobs = self.blobs.lock().unwrap();
+        let blobs = self.blobs.read().unwrap();
         blobs.get(hash).cloned()
     }
 
-    pub fn put_exact(&self, key: String, content: Vec<u8>) {
-        let mut blobs = self.blobs.lock().unwrap();
-        blobs.insert(key, content);
+    pub fn put_snapshot(&self, id: String, manifest_bytes: Vec<u8>) {
+        let mut snaps = self.snapshots.write().unwrap();
+        snaps.insert(id, manifest_bytes);
+    }
+
+    pub fn get_snapshot(&self, id: &str) -> Option<Vec<u8>> {
+        let snaps = self.snapshots.read().unwrap();
+        snaps.get(id).cloned()
     }
 }
 
-/// A manifest representing a snapshot state.
-/// Maps paths to blob hashes.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct Manifest {
-    /// List of entries, MUST be sorted by path.
-    pub entries: Vec<ManifestEntry>,
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
+pub struct Entry {
+    pub blob: String,
+    pub path: String,
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub struct ManifestEntry {
-    pub path: String,
-    pub blob: String,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Manifest {
+    pub entries: Vec<Entry>,
 }
 
 impl Manifest {
-    pub fn new(entries: Vec<ManifestEntry>) -> Self {
-        let mut sorted = entries;
-        sorted.sort_by(|a, b| a.path.cmp(&b.path));
-        Self { entries: sorted }
+    pub fn new(mut entries: Vec<Entry>) -> Self {
+        // Enforce deterministic order (lexicographic by path)
+        entries.sort_by(|a, b| a.path.cmp(&b.path));
+        Self { entries }
     }
 
-    /// Computes the canonical JSON representation of the manifest.
-    pub fn to_canonical_json(&self) -> Result<Vec<u8>> {
-        // Use serde_json::to_vec for compact JSON.
-        // BTreeMap ensure keys are sorted if we were using a map, but we use a Vec of structs.
-        // Struct fields are serialized in definition order.
-        // We need to ensure `entries` is sorted by path, which `new` enforces or we should enforce here.
-        // But for "canonical manifest bytes" used in snapshot_id, we need a strictly defined format.
-        // The spec say: { "entries": [ { "path": "...", "blob": "..." } ] }
+    /// Serializes to Canonical JSON
+    pub fn to_canonical_json(&self) -> Result<String> {
+        // serde_json::to_string ensures strict JSON output (no whitespace by default)
+        // Order of keys in objects: serde_json default (alphabetical for BTreeMap-like but struct fields order?)
+        // Struct fields are serialized in definition order usually?
+        // Canonical JSON requires sorted keys.
+        // Option A: Use a BTreeMap to intermediate.
+        // Option B: Assume `entries` (array) is ordered (we did that).
+        // `Entry` has `path`, `blob`. P comes after B. So `blob` then `path`.
+        // If we want lexicographic keys: "blob", "path".
+        // `Entries` key in manifest: "entries".
+        // So we need to ensure struct fields are serialized in key order.
+        // It's safer to convert to serde_json::Value and let it sort?
+        // serde_json (since v1.0) preserves insertion order of maps by default if "preserve_order" is on?
+        // No, standard `to_string` sorts map keys.
+        // But structs?
+        // Let's use `serde_json::to_value` then `to_string`. Value uses BTreeMap for objects usually (if feature "preserve_order" not enabled).
 
-        // We re-sort to be safe before serializing?
-        // Or assume it's created via `new`.
+        let val = serde_json::to_value(self)?;
+        // This ensures keys are sorted
+        let s = serde_json::to_string(&val)?;
+        Ok(s)
+    }
 
-        serde_json::to_vec(self).context("Failed to serialize manifest")
+    pub fn compute_snapshot_id(&self, fingerprint_json: &str) -> Result<String> {
+        let manifest_json = self.to_canonical_json()?;
+        let raw = format!("{}\n{}", fingerprint_json, manifest_json);
+        let hash = hex::encode(Sha256::digest(raw.as_bytes()));
+        Ok(format!("sha256:{}", hash))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_manifest_sorting() {
+        let entries = vec![
+            Entry {
+                path: "src/b.ts".into(),
+                blob: "sha256:2".into(),
+            },
+            Entry {
+                path: "src/a.ts".into(),
+                blob: "sha256:1".into(),
+            },
+        ];
+        let manifest = Manifest::new(entries);
+        assert_eq!(manifest.entries[0].path, "src/a.ts");
+        assert_eq!(manifest.entries[1].path, "src/b.ts");
+    }
+
+    #[test]
+    fn test_canonical_json() {
+        let entries = vec![Entry {
+            path: "a".into(),
+            blob: "b".into(),
+        }];
+        let manifest = Manifest::new(entries);
+        let json = manifest.to_canonical_json().unwrap();
+        // check keys sorted. "entries" is only key here.
+        // inside entry: blob, then path.
+        // {"entries":[{"blob":"b","path":"a"}]}
+        assert_eq!(json, r#"{"entries":[{"blob":"b","path":"a"}]}"#);
     }
 }

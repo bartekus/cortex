@@ -1,226 +1,207 @@
-
 import * as fs from 'fs';
 import * as path from 'path';
-import { spawn } from 'child_process';
+import { fileURLToPath } from 'url';
+import { dirname } from 'path';
+import { exec, execSync, spawn } from 'child_process';
+import { RepoSetup } from './mutation.ts';
 
-const ROOT_DIR = path.join(path.resolve(process.cwd()), '..');
-const TESTS_ROOT = path.resolve(process.cwd());
-const BIN_PATH = path.join(ROOT_DIR, 'rust/target/debug/cortex-mcp');
-const SUITE_PATH = path.join(TESTS_ROOT, 'golden/v1/suite.json');
-const REPOS_DIR = path.join(TESTS_ROOT, 'fixtures/repos');
-const TOY_REPO_ROOT = path.join(REPOS_DIR, 'toy-repo-01');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
-// Ensure binary exists
-if (!fs.existsSync(BIN_PATH)) {
-    console.error(`Binary not found at ${BIN_PATH}. Build it first!`);
+// Configuration
+const UPDATE_GOLDEN = process.env.UPDATE_GOLDEN === '1';
+const GOLDEN_DIR = path.resolve(__dirname, '../golden');
+const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/run');
+const REPO_ROOT = path.join(FIXTURES_DIR, 'toy-repo-01');
+
+// Setup environment
+if (fs.existsSync(FIXTURES_DIR)) {
+    fs.rmSync(FIXTURES_DIR, { recursive: true, force: true });
+}
+fs.mkdirSync(FIXTURES_DIR, { recursive: true });
+
+// 1. Schema Lint
+console.log("Running Schema Lint...");
+const SCHEMA_LINT_PATH = path.join(__dirname, 'schema_lint.ts');
+try {
+    execSync(`npx -y ts-node "${SCHEMA_LINT_PATH}"`, { stdio: 'inherit' });
+} catch (e) {
+    console.error("Schema lint failed.");
     process.exit(1);
 }
 
-// Load Suite
-const suite = JSON.parse(fs.readFileSync(SUITE_PATH, 'utf-8'));
+// 2. Setup Repo
+console.log("Initializing deterministic repo...");
+const repo = new RepoSetup(FIXTURES_DIR, 'toy-repo-01');
+repo.init();
+repo.writeFile('src/main.rs', 'fn main() {}');
+repo.writeFile('README.md', '# Toy Repo');
+repo.git('add .');
+repo.commit('Initial commit', '2024-01-01T00:00:00Z');
 
-// Prepare Replacements
-const replacements: Record<string, string> = {
-    "{{REPO_ROOT}}": TOY_REPO_ROOT
-};
+// 3. Build Server
+console.log("Building MCP server...");
+execSync('cargo build -p cortex-mcp', {
+    cwd: path.resolve(__dirname, '../../rust/mcp'),
+    stdio: 'inherit'
+});
+const SERVER_BIN = path.resolve(__dirname, '../../rust/target/debug/cortex-mcp');
 
-// State for dynamic replacements
-const dynamicReplacements: Record<string, string> = {};
-
-import { execSync } from 'child_process';
-
+// 4. Run Tests
 async function run() {
-    console.log("Cleaning toy repo...");
-    try {
-        execSync('git clean -fd && git checkout .', { cwd: TOY_REPO_ROOT, stdio: 'inherit' });
-    } catch (e) {
-        console.error("Failed to clean repo:", e);
-        process.exit(1);
+    // Collect tests
+    const files = fs.readdirSync(GOLDEN_DIR).filter(f => f.endsWith('.json'));
+    files.sort();
+
+    for (const file of files) {
+        console.log(`Running golden test: ${file}`);
+        await runTestFile(file);
     }
+}
 
-    console.log("Starting MCP Server...");
+async function runTestFile(file: string) {
+    const filePath = path.join(GOLDEN_DIR, file);
+    const testCase = JSON.parse(fs.readFileSync(filePath, 'utf8'));
 
-    const env = { ...process.env, CORTEX_WORKSPACE_ROOTS: REPOS_DIR };
-    const proc = spawn(BIN_PATH, [], { env, stdio: ['pipe', 'pipe', 'inherit'] });
+    // Spawn server
+    const proc = spawn(SERVER_BIN, [], {
+        env: { ...process.env, RUST_LOG: 'debug' }, // Optional logging
+    });
 
-    let buffer = Buffer.alloc(0);
+    let stdoutBuffer = Buffer.alloc(0);
+    let pendingRequests: any[] = [];
 
-    proc.stdout.on('data', (chunk) => {
-        buffer = Buffer.concat([buffer, chunk]);
+    proc.stderr.on('data', (d) => {
+        // console.error(`SERVER STDERR: ${d}`);
+    });
+
+    proc.stdout.on('data', (d) => {
+        stdoutBuffer = Buffer.concat([stdoutBuffer, d]);
         processBuffer();
     });
 
-    let queue: any[] = [];
-    let processing = false;
-
-    // Helper to request next test
-    function nextTest() {
-        if (queue.length > 0) {
-            const { resolve, reject, test } = queue.shift();
-            // Prepare Request
-            let reqStr = JSON.stringify(test.request);
-
-            // Apply Static Replacements
-            for (const [k, v] of Object.entries(replacements)) {
-                reqStr = reqStr.split(k).join(v);
-            }
-            // Apply Dynamic Replacements
-            for (const [k, v] of Object.entries(dynamicReplacements)) {
-                // k is like {{LEASE_ID}}
-                reqStr = reqStr.split(k).join(v);
-            }
-
-            const reqBuf = Buffer.from(reqStr, 'utf-8');
-            const header = `Content-Length: ${reqBuf.length}\r\n\r\n`;
-
-            try {
-                proc.stdin.write(header);
-                proc.stdin.write(reqBuf);
-            } catch (e) {
-                reject(e);
-            }
-
-            // Wait for response logic is handled by processBuffer which resolves promise
-            activeRequest = { resolve, reject, test };
-        } else {
-            // Finished?
-        }
-    }
-
-    let activeRequest: any = null;
-
     function processBuffer() {
         while (true) {
-            // Check for header
-            // Look for \r\n\r\n
-            const headerEnd = buffer.indexOf('\r\n\r\n');
-            if (headerEnd === -1) return; // Need more data
+            // Find header delimiter \r\n\r\n
+            const idx = stdoutBuffer.indexOf('\r\n\r\n');
+            if (idx === -1) break;
 
-            const headerPart = buffer.slice(0, headerEnd).toString('utf-8');
+            const headerPart = stdoutBuffer.subarray(0, idx).toString();
+            // Parse content length
             const match = headerPart.match(/Content-Length: (\d+)/i);
             if (!match) {
-                console.error("Invalid header:", headerPart);
+                console.error("Invalid header: " + headerPart);
                 process.exit(1);
             }
-            const len = parseInt(match[1], 10);
+            const len = parseInt(match[1]);
+            const bodyStart = idx + 4;
 
-            const bodyStart = headerEnd + 4;
-            if (buffer.length < bodyStart + len) return; // Need more data body
-
-            const body = buffer.slice(bodyStart, bodyStart + len).toString('utf-8');
-            console.log("Raw Response for test:", activeRequest?.test?.name, body); // ADDED LOGGING
-            buffer = buffer.slice(bodyStart + len);
-
-            handleResponse(JSON.parse(body));
-        }
-    }
-
-    function handleResponse(res: any) {
-        if (!activeRequest) {
-            // Maybe logging or unprompted notification?
-            // "notifications/initialized" usually gets no response if it's a notification?
-            return;
-        }
-
-        // Notifications might be interleaved?
-        if (res.id === activeRequest.test.request.id) {
-            activeRequest.resolve(res);
-            activeRequest = null;
-        } else {
-            // Ignore non-matching ID or notifications??
-        }
-    }
-
-    // Execute Suite
-    for (const test of suite) {
-        // If request has no id, it's a notification. send and continue.
-        if (test.request.id === undefined) {
-            // Just send
-            let reqStr = JSON.stringify(test.request);
-            const reqBuf = Buffer.from(reqStr, 'utf-8');
-            const header = `Content-Length: ${reqBuf.length}\r\n\r\n`;
-            proc.stdin.write(header);
-            proc.stdin.write(reqBuf);
-            // Wait small delay?
-            await new Promise(r => setTimeout(r, 100));
-            continue;
-        }
-
-        console.log(`Running test: ${test.name}`);
-
-        const response: any = await new Promise((resolve, reject) => {
-            queue.push({ resolve, reject, test });
-            if (!activeRequest) nextTest();
-        });
-
-        // Validation
-        if (test.response) {
-            validateResponse(test.response, response);
-        }
-    }
-
-    proc.kill();
-    console.log("Suite passed!");
-}
-
-function validateResponse(expected: any, actual: any) {
-    recursiveCompare(expected, actual, "");
-}
-
-function recursiveCompare(exp: any, act: any, path: string) {
-    if (exp === "__IGNORE__") return;
-
-    if (typeof exp === 'string') {
-        if (exp.startsWith("{{") && exp.endsWith("}}")) {
-            // Capture?
-            let expectedVal = exp;
-            for (const [k, v] of Object.entries(replacements)) {
-                expectedVal = expectedVal.split(k).join(v);
-            }
-
-            if (dynamicReplacements[exp]) {
-                if (act !== dynamicReplacements[exp]) {
-                    throw new Error(`Mismatch at ${path}: expected ${dynamicReplacements[exp]} (bound to ${exp}), got ${act}`);
-                }
+            if (stdoutBuffer.length < bodyStart + len) {
+                // Wait for more data
                 return;
             }
 
-            dynamicReplacements[exp] = act;
+            const body = stdoutBuffer.subarray(bodyStart, bodyStart + len).toString();
+            stdoutBuffer = stdoutBuffer.subarray(bodyStart + len);
+
+            handleMessage(JSON.parse(body));
+        }
+    }
+
+    let requestIdx = 0;
+
+    // Send Input[0]
+    sendNext();
+
+    function sendNext() {
+        if (requestIdx >= testCase.interactions.length) {
+            proc.kill();
             return;
         }
+        const interaction = testCase.interactions[requestIdx];
+        const req = interaction.request;
+        // Inject dynamic values if needed (REPO_ROOT)
+        const reqStr = JSON.stringify(req).replace(/__REPO_ROOT__/g, REPO_ROOT);
 
-        let expectedVal = exp;
-        for (const [k, v] of Object.entries(replacements)) {
-            expectedVal = expectedVal.split(k).join(v);
-        }
-
-        if (act !== expectedVal) {
-            throw new Error(`Mismatch at ${path}: expected '${expectedVal}', got '${act}'`);
-        }
-        return;
+        const payload = Buffer.from(reqStr);
+        proc.stdin.write(`Content-Length: ${payload.length}\r\n\r\n`);
+        proc.stdin.write(payload);
     }
 
-    if (Array.isArray(exp)) {
-        if (!Array.isArray(act)) throw new Error(`Mismatch at ${path}: expected array, got ${typeof act}`);
-        if (exp.length !== act.length) throw new Error(`Mismatch at ${path}: array length expected ${exp.length}, got ${act.length}`);
-        for (let i = 0; i < exp.length; i++) {
-            recursiveCompare(exp[i], act[i], `${path}[${i}]`);
+    function handleMessage(msg: any) {
+        const interaction = testCase.interactions[requestIdx];
+
+        // Normalize response
+        const normalized = normalize(msg);
+
+        if (UPDATE_GOLDEN) {
+            interaction.response = normalized;
+        } else {
+            // Validate
+            if (JSON.stringify(normalized) !== JSON.stringify(interaction.response)) {
+                console.error(`Mismatch in ${file} request ${requestIdx}`);
+                console.error("Expected:", JSON.stringify(interaction.response, null, 2));
+                console.error("Actual:", JSON.stringify(normalized, null, 2));
+                process.exit(1);
+            }
         }
-        return;
+
+        requestIdx++;
+        if (requestIdx < testCase.interactions.length) {
+            sendNext();
+        } else {
+            proc.kill();
+            finish();
+        }
     }
 
-    if (typeof exp === 'object' && exp !== null) {
-        if (typeof act !== 'object' || act === null) throw new Error(`Mismatch at ${path}: expected object, got ${act === null ? 'null' : typeof act}`); // IMPROVED ERROR
-        for (const k of Object.keys(exp)) {
-            if (!(k in act)) throw new Error(`Mismatch at ${path}: missing key ${k}`);
-            recursiveCompare(exp[k], act[k], `${path}.${k}`);
+    function finish() {
+        if (UPDATE_GOLDEN) {
+            fs.writeFileSync(filePath, JSON.stringify(testCase, null, 4));
+            console.log("Updated golden file.");
         }
-        return;
     }
 
-    if (exp !== act) {
-        throw new Error(`Mismatch at ${path}: expected ${JSON.stringify(exp)}, got ${JSON.stringify(act)}`); // IMPROVED ERROR
-    }
+    // Wait for process exit?
+    await new Promise<void>(resolve => {
+        proc.on('close', resolve);
+    });
+}
+
+function normalize(obj: any): any {
+    // Recursive normalization
+    // 1. UUIDs -> valid fake UUIDs? Or just canonicalize?
+    // 2. Dates
+    // 3. REPO_ROOT -> __REPO_ROOT__
+
+    const str = JSON.stringify(obj);
+    let replaced = str.replace(new RegExp(escapeRegExp(REPO_ROOT), 'g'), '__REPO_ROOT__');
+
+    // Normalize UUIDs (simple regex for v4)
+    // We can't consistently map random UUIDs without state.
+    // But `lease_id` is random.
+    // We should mask it: "lease_id": "UUID-STUB" if it looks like uuid?
+    // Regex: [0-9a-f]{8}-[0-9a-f]{4}-...
+    // Only verify format?
+
+    // For golden tests, hard to match exact UUID.
+    // We update the expected to match the pattern or use a stable replacement if we track it.
+    // Simple approach: Replace any UUID with "<UUID>" in the string?
+    // But we might have multiple.
+
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/g;
+    replaced = replaced.replace(uuidRegex, '<UUID>');
+
+    // Also timestamps if any? Fingerprints have shas.
+    // Git OIDs depend on commit time/author.
+    // Our RepoSetup forces date. So SHAs should be STABLE!
+    // That's the key "Determinism".
+
+    return JSON.parse(replaced);
+}
+
+function escapeRegExp(string: string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
 run().catch(e => {

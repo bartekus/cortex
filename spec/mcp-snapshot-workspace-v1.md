@@ -50,11 +50,14 @@ A fingerprint uniquely identifies the state of the repo's HEAD, Index, and Worki
 ### 2.3 Lease Semantics
 - **Issuance**: A lease is issued by any `worktree`-mode read tool (`file`, `list`, `grep`, `diff`, `export`) or `workspace.apply_patch(mode=worktree)` if a valid `lease_id` is not provided.
 - **Validation**: Every `worktree`-mode request with a `lease_id` validates it against the current live fingerprint.
-- **Stale Lease**: If the current fingerprint differs from the lease's base fingerprint, the server returns a `STALE_LEASE` error containing the current fingerprint. **No auto-refresh**. The client must retry.
+- **Stale Lease**: If the current fingerprint differs from the lease's base fingerprint, the server returns a `STALE_LEASE` error containing the current fingerprint.
+    - **No auto-refresh**. The client must retry.
+    - Error must be structured (code "STALE_LEASE", details including fingerprint).
 - **Touched Files**: The lease tracks files "touched" (read/listed) to support partial snapshot creation later.
     - `list`: Touches returned file entries + implicit parents.
     - `grep`: Touches **all candidate files** resolved under paths (deterministic order). Binary files are excluded from candidates (and thus not touched).
     - `diff`: Touches target path.
+    - Mutators (`apply_patch`, `write_file`, `delete`): Touch affected paths.
 
 ### 2.4 Snapshot ID
 - **Manifest**: A canonical JSON object mapping paths to blob hashes.
@@ -66,7 +69,16 @@ A fingerprint uniquely identifies the state of the repo's HEAD, Index, and Worki
     ]
   }
   ```
-- **Derivation**: `sha256( canonical_fingerprint_json + "\n" + canonical_manifest_json )`.
+  Entries must be sorted lexicographically by path.
+
+- **Derivation**:
+  ```
+  snapshot_id = sha256(
+    canonical_fingerprint_json
+    + "\n"
+    + manifest_bytes
+  )
+  ```
 - **Encoding**: `sha256:<hex>`.
 
 ## 3. Tool Specifications
@@ -85,41 +97,55 @@ A fingerprint uniquely identifies the state of the repo's HEAD, Index, and Worki
 - **Mode `snapshot`**: Lists files from the manifest.
     - **Strictness**: Returns only captured entries.
     - **Implicit Parents**: If `src/a.ts` is in manifest, `src` is listable.
-    - **Unknown/Uncaptured**: Returns empty list (not error).
+    - **Unknown/Uncaptured**: Returns empty list (not error), `truncated=false`.
 
 #### `snapshot.grep`
-- **Candidates**: Deterministic walk (lexicographic). Ignore rules applied. Binary files excluded.
-- **Limits**: Touches/searches candidates up to `max_files` limit. Returns `truncated=true` if hit.
+- **Candidates**: Deterministic walk (lexicographic). Ignore rules applied. Binary files excluded (frozen choice).
+- **Limits**: Touches/searches candidates up to `max_files` limit. Returns `truncated=true` if limit hit.
+- **Determinism**: Candidate selection order must be stable.
 
 #### `snapshot.info`
 - **Output**: `fingerprint` (object) + `manifest_stats` (files count, total bytes).
 - **Note**: Does NOT return lease context.
 
+#### `snapshot.changes`
+- **Output**: List of changed files (status).
+- **Determinism**: rename detection only if deterministic and spec'd.
+
+#### `snapshot.export`
+- **Output**: Deterministic bundle export format (order defined and stable).
+
 ### 3.2 Workspace Tools
 
 #### `workspace.apply_patch`
 - **Mode `worktree`**: Applies to live FS. Validates lease. Returns new `fingerprint` + `lease_id`.
-- **Mode `snapshot`**: Applies to in-memory manifest. Returns new `snapshot_id`.
+- **Mode `snapshot`**: Applies to in-memory manifest (updates BlobStore). Returns new `snapshot_id`.
+- **Format**: Unified Diff.
 - **Policy**:
-    - **No Fuzzing**: Context must match byte-for-byte.
+    - **Context Matching**: Byte-for-byte. No whitespace normalization.
+    - **No Fuzzing**: Must match exactly.
     - **Rejects**: Structured list of `{ "path": "...", "hunks": [{ "index": 0, "reason": "context_mismatch" }] }`.
+    - **Sorting**: Rejects sorted by `path` then `hunk_index`.
 
 #### `workspace.write_file` / `workspace.delete`
 - **Safety**:
     1.  `canonicalize(repo_root)`.
-    2.  Resolve target: `canonicalize(target)` (or `parent` for new files).
+    2.  Resolve target: `canonicalize(target)` (or `parent` then join `filename` for new files).
     3.  **Reject** `PERMISSION_DENIED` if resolved path is not within `repo_root` prefix.
+    4.  **Reject** `..` traversal.
+    5.  **Reject** absolute paths outside repo.
+    6.  **Reject** symlink escape out of repo.
 
 ## 4. Error Model
 
-All errors MUST conform to:
+All errors MUST conform to a structured format, especially `STALE_LEASE`.
 
 ```json
 {
   "error": {
     "code": "NOT_FOUND | INVALID_ARGUMENT | REPO_CHANGED | PERMISSION_DENIED | TOO_LARGE | INTERNAL | STALE_LEASE",
     "message": "human readable",
-    "details": { "fingerprint": { ... } } // For STALE_LEASE
+    "details": { "fingerprint": { ... } } // For STALE_LEASE, mandatory
   }
 }
 ```
@@ -130,3 +156,4 @@ All errors MUST conform to:
     - Success branch is `oneOf` [`ImmutableResponse`, `WorktreeResponse`].
     - `ImmutableResponse`: `cache_hint: "immutable"`.
     - `WorktreeResponse`: `cache_hint: "until_dirty"`, **MUST** include `lease_id` and `fingerprint`.
+- **Cache Hints**: Must be `const` in schema and verified at runtime.
