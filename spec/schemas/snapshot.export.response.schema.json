@@ -1,0 +1,123 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.export.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.export worktree success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "format",
+                "summary",
+                "bundle",
+                "lease_id",
+                "fingerprint",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "object",
+                    "required": [
+                        "included_files",
+                        "included_diffs",
+                        "truncated"
+                    ],
+                    "properties": {
+                        "included_files": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "included_diffs": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "truncated": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "bundle": {
+                    "type": "string"
+                },
+                "lease_id": {
+                    "$ref": "./common.schema.json#/$defs/lease_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "until_dirty"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "title": "snapshot.export snapshot success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "format",
+                "summary",
+                "bundle",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "format": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "object",
+                    "required": [
+                        "included_files",
+                        "included_diffs",
+                        "truncated"
+                    ],
+                    "properties": {
+                        "included_files": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "included_diffs": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "truncated": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "bundle": {
+                    "type": "string"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

@@ -38,6 +38,7 @@ rust/mcp/tests/outputs/
 rust/xray/target/
 rust/xray/tests/outputs/
 
+tests/node_modules/
 test-state/
 rust-dist/
 dist/
@@ -48,3 +49,5 @@ docs/__generated__
 bin/cortex
 bin/xray
 bin/cortex-mcp
+
+lint_output.txt

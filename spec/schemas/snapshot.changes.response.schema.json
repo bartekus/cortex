@@ -1,0 +1,192 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.changes.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.changes worktree success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "added",
+                "modified",
+                "deleted",
+                "renamed",
+                "untracked",
+                "staged",
+                "unstaged",
+                "lease_id",
+                "fingerprint",
+                "cache_key",
+                "cache_hint"
+            ],
+            "$defs": {
+                "rename": {
+                    "type": "object",
+                    "required": [
+                        "from",
+                        "to",
+                        "score"
+                    ],
+                    "properties": {
+                        "from": {
+                            "$ref": "./common.schema.json#/$defs/path"
+                        },
+                        "to": {
+                            "$ref": "./common.schema.json#/$defs/path"
+                        },
+                        "score": {
+                            "type": "number",
+                            "minimum": 0,
+                            "maximum": 100
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "change_set": {
+                    "type": "object",
+                    "required": [
+                        "added",
+                        "modified",
+                        "deleted",
+                        "renamed"
+                    ],
+                    "properties": {
+                        "added": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "./common.schema.json#/$defs/path"
+                            }
+                        },
+                        "modified": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "./common.schema.json#/$defs/path"
+                            }
+                        },
+                        "deleted": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "./common.schema.json#/$defs/path"
+                            }
+                        },
+                        "renamed": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/$defs/rename"
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "added": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "modified": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "deleted": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "renamed": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/rename"
+                    }
+                },
+                "untracked": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "staged": {
+                    "$ref": "#/$defs/change_set"
+                },
+                "unstaged": {
+                    "$ref": "#/$defs/change_set"
+                },
+                "lease_id": {
+                    "$ref": "./common.schema.json#/$defs/lease_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "until_dirty"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "title": "snapshot.changes snapshot success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "added",
+                "modified",
+                "deleted",
+                "renamed",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "added": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "modified": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "deleted": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "./common.schema.json#/$defs/path"
+                    }
+                },
+                "renamed": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/rename"
+                    }
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

@@ -2,6 +2,8 @@ use cortex_mcp::io::fs::RealFs;
 use cortex_mcp::resolver::order::ResolveEngine;
 use cortex_mcp::router::mounts::MountRegistry;
 use cortex_mcp::router::{JsonRpcRequest, Router};
+use cortex_mcp::snapshot::{lease::LeaseStore, store::BlobStore, tools::SnapshotTools};
+use cortex_mcp::workspace::WorkspaceTools;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -14,7 +16,14 @@ fn test_mcp_tools_list() {
     let fs = RealFs;
     let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
-    let router = Router::new(resolver, mounts);
+
+    let blob_store = Arc::new(BlobStore::new());
+    let lease_store = Arc::new(LeaseStore::new());
+
+    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), blob_store.clone()));
+    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), blob_store.clone()));
+
+    let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
     // Test tools/list
     let req = JsonRpcRequest {
@@ -42,7 +51,14 @@ fn test_mcp_tools_call_validation() {
     let fs = RealFs;
     let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
-    let router = Router::new(resolver, mounts);
+
+    let blob_store = Arc::new(BlobStore::new());
+    let lease_store = Arc::new(LeaseStore::new());
+
+    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), blob_store.clone()));
+    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), blob_store.clone()));
+
+    let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
     // Call resolve_mcp without name -> Error
     let req = JsonRpcRequest {

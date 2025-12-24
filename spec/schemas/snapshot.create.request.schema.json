@@ -1,0 +1,39 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.create.request.schema.json",
+    "type": "object",
+    "required": [
+        "repo_root"
+    ],
+    "properties": {
+        "repo_root": {
+            "$ref": "./common.schema.json#/$defs/repo_root"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "paths": {
+            "type": "array",
+            "items": {
+                "$ref": "./common.schema.json#/$defs/path"
+            }
+        },
+        "base_ref": {
+            "type": "string",
+            "minLength": 1
+        },
+        "options": {
+            "type": "object",
+            "properties": {
+                "rename_detection": {
+                    "$ref": "./common.schema.json#/$defs/rename_detection"
+                },
+                "ignore_rules": {
+                    "$ref": "./common.schema.json#/$defs/ignore_rules"
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

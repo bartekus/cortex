@@ -1,0 +1,66 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.info.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.info success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "fingerprint",
+                "manifest_stats",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "manifest_stats": {
+                    "type": "object",
+                    "required": [
+                        "files",
+                        "total_bytes"
+                    ],
+                    "properties": {
+                        "files": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "total_bytes": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "head_sha": {
+                    "$ref": "./common.schema.json#/$defs/sha"
+                },
+                "base_ref": {
+                    "type": "string"
+                },
+                "base_sha": {
+                    "$ref": "./common.schema.json#/$defs/sha"
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

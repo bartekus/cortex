@@ -1,0 +1,25 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.file.request.schema.json",
+    "type": "object",
+    "required": [
+        "snapshot_id",
+        "path",
+        "mode"
+    ],
+    "properties": {
+        "snapshot_id": {
+            "$ref": "./common.schema.json#/$defs/snapshot_id"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "path": {
+            "$ref": "./common.schema.json#/$defs/path"
+        },
+        "mode": {
+            "$ref": "./common.schema.json#/$defs/mode"
+        }
+    },
+    "additionalProperties": false
+}

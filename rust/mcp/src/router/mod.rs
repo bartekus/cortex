@@ -28,14 +28,29 @@ pub struct JsonRpcResponse {
     pub id: Option<Value>,
 }
 
+use crate::snapshot::tools::SnapshotTools;
+use crate::workspace::WorkspaceTools;
+
 pub struct Router {
     resolver: Arc<ResolveEngine<RealFs>>,
     mounts: MountRegistry,
+    snapshot_tools: Arc<SnapshotTools>,
+    workspace_tools: Arc<WorkspaceTools>,
 }
 
 impl Router {
-    pub fn new(resolver: Arc<ResolveEngine<RealFs>>, mounts: MountRegistry) -> Self {
-        Self { resolver, mounts }
+    pub fn new(
+        resolver: Arc<ResolveEngine<RealFs>>,
+        mounts: MountRegistry,
+        snapshot_tools: Arc<SnapshotTools>,
+        workspace_tools: Arc<WorkspaceTools>,
+    ) -> Self {
+        Self {
+            resolver,
+            mounts,
+            snapshot_tools,
+            workspace_tools,
+        }
     }
 
     pub fn handle_request(&self, req: &JsonRpcRequest) -> JsonRpcResponse {
@@ -58,35 +73,120 @@ impl Router {
                             "inputSchema": {
                                 "type": "object",
                                 "properties": { "name": { "type": "string" } },
-                                "required": ["name"],
-                                "additionalProperties": false
+                                "required": ["name"]
                             }
                         },
                         {
                             "name": "list_mounts",
                             "description": "List currently resolved/mounted servers",
+                            "inputSchema": { "type": "object", "properties": {} }
+                        },
+                        {
+                            "name": "snapshot.create",
+                            "description": "Create a new snapshot",
                             "inputSchema": {
                                 "type": "object",
-                                "properties": {},
-                                "additionalProperties": false
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "lease_id": { "type": "string" },
+                                    "paths": { "type": "array", "items": { "type": "string" } }
+                                },
+                                "required": ["repo_root"]
                             }
                         },
                         {
-                            "name": "describe_skills",
-                            "description": "List available skills",
+                            "name": "snapshot.list",
+                            "description": "List files in a snapshot or worktree",
                             "inputSchema": {
                                 "type": "object",
-                                "properties": {},
-                                "additionalProperties": false
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
+                                },
+                                "required": ["repo_root", "path", "mode"]
                             }
                         },
                         {
-                            "name": "get_capabilities",
-                            "description": "Get server capabilities",
+                            "name": "snapshot.file",
+                            "description": "Read a file from snapshot or worktree",
                             "inputSchema": {
                                 "type": "object",
-                                "properties": {},
-                                "additionalProperties": false
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
+                                },
+                                "required": ["repo_root", "path", "mode"]
+                            }
+                        },
+                        {
+                            "name": "snapshot.grep",
+                            "description": "Search for a pattern",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "pattern": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" },
+                                    "case_insensitive": { "type": "boolean" }
+                                },
+                                "required": ["repo_root", "pattern", "mode"]
+                            }
+                        },
+                        {
+                            "name": "workspace.apply_patch",
+                            "description": "Apply a patch",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "patch": { "type": "string" },
+                                    "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
+                                    "strip": { "type": "integer" },
+                                    "reject_on_conflict": { "type": "boolean" },
+                                    "dry_run": { "type": "boolean" },
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
+                                },
+                                "required": ["repo_root", "patch", "mode"]
+                            }
+                        },
+                        {
+                            "name": "workspace.write_file",
+                            "description": "Write a file",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "content": { "type": "string" },
+                                    "lease_id": { "type": "string" },
+                                    "create_dirs": { "type": "boolean" },
+                                    "dry_run": { "type": "boolean" }
+                                },
+                                "required": ["repo_root", "path", "content", "lease_id"]
+                            }
+                        },
+                        {
+                            "name": "workspace.delete",
+                            "description": "Delete a file",
+                            "inputSchema": {
+                                "type": "object",
+                                "properties": {
+                                    "repo_root": { "type": "string" },
+                                    "path": { "type": "string" },
+                                    "lease_id": { "type": "string" },
+                                    "dry_run": { "type": "boolean" }
+                                },
+                                "required": ["repo_root", "path", "lease_id"]
                             }
                         }
                     ]
@@ -94,156 +194,289 @@ impl Router {
             ),
 
             "tools/call" => {
-                let params_result = req
-                    .params
-                    .as_ref()
-                    .ok_or(())
-                    .and_then(|p| p.as_object().ok_or(()));
-                if params_result.is_err() {
-                    return json_rpc_error(
-                        req.id.clone(),
-                        -32602,
-                        "Invalid params: must be an object",
-                    );
-                }
-                let params = params_result.unwrap();
-
-                let name = params.get("name").and_then(|n| n.as_str());
-                if name.is_none() {
-                    return json_rpc_error(
-                        req.id.clone(),
-                        -32602,
-                        "Invalid params: missing 'name'",
-                    );
-                }
-                let name = name.unwrap();
-
-                let args_value = params.get("arguments");
-                if let Some(v) = args_value {
-                    if !v.is_object() {
-                        return json_rpc_error(
-                            req.id.clone(),
-                            -32602,
-                            "Invalid params: 'arguments' must be an object",
-                        );
-                    }
-                }
-                let args = args_value.and_then(|a| a.as_object());
-
-                let args_is_empty = match args {
-                    Some(m) => m.is_empty(),
-                    None => true,
+                let params = match req.params.as_ref().and_then(|p| p.as_object()) {
+                    Some(p) => p,
+                    None => return json_rpc_error(req.id.clone(), -32602, "Invalid params"),
+                };
+                let name = match params.get("name").and_then(|n| n.as_str()) {
+                    Some(n) => n,
+                    None => return json_rpc_error(req.id.clone(), -32602, "Missing tool name"),
+                };
+                let args = params.get("arguments").and_then(|a| a.as_object());
+                let args = match args {
+                    Some(a) => a,
+                    None => return json_rpc_error(req.id.clone(), -32602, "Missing arguments"),
                 };
 
                 match name {
                     "resolve_mcp" => {
-                        // Strict validation: resolve_mcp requires 'name' inside arguments
-                        let target = args.and_then(|a| a.get("name")).and_then(|n| n.as_str());
-                        if target.is_none() {
-                            return json_rpc_error(
-                                req.id.clone(),
-                                -32602,
-                                "Invalid params: arguments.name is required",
-                            );
-                        }
-                        let target = target.unwrap();
-
-                        match self.resolver.resolve(target) {
-                            Ok(resp) => {
-                                // Side effect: Register mount if resolved
-                                if resp.status == crate::protocol::types::ResolveStatus::Resolved {
-                                    if let (Some(root), Some(rid)) = (&resp.root, &resp.resolved_id)
+                        let target = args.get("name").and_then(|n| n.as_str());
+                        if let Some(target) = target {
+                            match self.resolver.resolve(target) {
+                                Ok(resp) => {
+                                    if resp.status
+                                        == crate::protocol::types::ResolveStatus::Resolved
                                     {
-                                        self.mounts.register(crate::router::mounts::Mount {
-                                            name: target.to_string(),
-                                            root: root.clone(),
-                                            resolved_id: Some(rid.clone()),
-                                            kind: resp.kind.clone(),
-                                            capabilities: resp.capabilities.clone(),
-                                        });
+                                        if let (Some(root), Some(rid)) =
+                                            (&resp.root, &resp.resolved_id)
+                                        {
+                                            self.mounts.register(crate::router::mounts::Mount {
+                                                name: target.to_string(),
+                                                root: root.clone(),
+                                                resolved_id: Some(rid.clone()),
+                                                kind: resp.kind.clone(),
+                                                capabilities: resp.capabilities.clone(),
+                                            });
+                                        }
                                     }
+                                    let content = json!([{ "type": "json", "json": resp }]);
+                                    json_rpc_ok(req.id.clone(), json!({ "content": content }))
                                 }
-
-                                // Return structured JSON + Text (JSON FIRST)
-                                let json_val = serde_json::to_value(&resp).unwrap();
-                                let text_val = serde_json::to_string(&resp).unwrap();
-
-                                // Direct result object
-                                json_rpc_ok(
+                                Err(e) => json_rpc_error(
                                     req.id.clone(),
-                                    json!({
-                                        "content": [
-                                            { "type": "json", "json": json_val },
-                                            { "type": "text", "text": text_val }
-                                        ]
-                                    }),
-                                )
+                                    -32603,
+                                    &format!("Resolution failed: {}", e),
+                                ),
                             }
-                            Err(e) => json_rpc_error(
-                                req.id.clone(),
-                                -32603,
-                                &format!("Resolution failed: {}", e),
-                            ),
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing name argument")
                         }
                     }
                     "list_mounts" => {
-                        if !args_is_empty {
-                            return json_rpc_error(
-                                req.id.clone(),
-                                -32602,
-                                "Invalid params: arguments must be an empty object",
-                            );
-                        }
                         let list = self.mounts.list();
                         json_rpc_ok(
                             req.id.clone(),
-                            json!({
-                                "content": [{ "type": "json", "json": list }]
-                            }),
-                        )
-                    }
-                    "describe_skills" => {
-                        if !args_is_empty {
-                            return json_rpc_error(
-                                req.id.clone(),
-                                -32602,
-                                "Invalid params: arguments must be an empty object",
-                            );
-                        }
-                        let skills = json!({
-                            "repo.read": { "methods": ["resolve_mcp"], "notes": "Resolve repo names to local paths" },
-                            "format:gofumpt": { "notes": "Planned" },
-                            "governance.audit": { "notes": "Planned" }
-                        });
-                        json_rpc_ok(
-                            req.id.clone(),
-                            json!({
-                                "content": [{ "type": "json", "json": skills }]
-                            }),
+                            json!({ "content": [{ "type": "json", "json": list }] }),
                         )
                     }
                     "get_capabilities" => {
-                        if !args_is_empty {
-                            return json_rpc_error(
-                                req.id.clone(),
-                                -32602,
-                                "Invalid params: arguments must be an empty object",
-                            );
-                        }
-                        // Return the same capabilities object we use for initialize
-                        // plus any extended metadata
                         let caps = json!({
                             "name": "cortex-mcp",
                             "server_capabilities": get_server_capabilities(),
-                            "protocol": { "type": "mcp-router", "supports_dynamic_mounts": true, "supports_aliases": true },
-                            "resolution": { "default_order": ["alias_map", "git_remote_match", "folder_name_match"] }
                         });
                         json_rpc_ok(
                             req.id.clone(),
-                            json!({
-                                "content": [{ "type": "json", "json": caps }]
-                            }),
+                            json!({ "content": [{ "type": "json", "json": caps }] }),
                         )
+                    }
+                    "snapshot.create" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let paths = args.get("paths").and_then(|v| v.as_array()).map(|arr| {
+                            arr.iter()
+                                .filter_map(|v| v.as_str().map(|s| s.to_string()))
+                                .collect()
+                        });
+
+                        if let Some(root) = repo_root {
+                            match self.snapshot_tools.create_snapshot(
+                                std::path::Path::new(root),
+                                lease_id.map(|s| s.to_string()),
+                                paths,
+                            ) {
+                                Ok(sid) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": { "snapshot_id": sid } }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
+                        }
+                    }
+                    "snapshot.list" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str());
+                        let mode = args.get("mode").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+
+                        if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
+                            match self.snapshot_tools.list_snapshot(
+                                std::path::Path::new(root),
+                                p,
+                                m,
+                                lease_id.map(|s| s.to_string()),
+                                snapshot_id.map(|s| s.to_string()),
+                            ) {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": res }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "snapshot.file" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str());
+                        let mode = args.get("mode").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+
+                        if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
+                            match self.snapshot_tools.read_file(
+                                std::path::Path::new(root),
+                                p,
+                                m,
+                                lease_id.map(|s| s.to_string()),
+                                snapshot_id.map(|s| s.to_string()),
+                            ) {
+                                Ok(bytes) => {
+                                    // Encode base64
+                                    use base64::{engine::general_purpose, Engine as _};
+                                    let b64 = general_purpose::STANDARD.encode(bytes);
+                                    json_rpc_ok(
+                                        req.id.clone(),
+                                        json!({ "content": [{ "type": "json", "json": { "content": b64 } }] }),
+                                    )
+                                }
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "snapshot.grep" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let pattern = args.get("pattern").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str()).unwrap_or(".");
+                        let mode = args.get("mode").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+                        let case_insensitive = args
+                            .get("case_insensitive")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(false);
+
+                        if let (Some(root), Some(pat), Some(m)) = (repo_root, pattern, mode) {
+                            match self.snapshot_tools.grep_snapshot(
+                                std::path::Path::new(root),
+                                pat,
+                                path,
+                                m,
+                                lease_id.map(|s| s.to_string()),
+                                snapshot_id.map(|s| s.to_string()),
+                                case_insensitive,
+                            ) {
+                                Ok(res) => {
+                                    // Helper: convert (path, line, content) to objects
+                                    let matches: Vec<Value> = res.into_iter().map(|(p, l, c)| {
+                                         json!({ "file_path": p, "line_number": l, "content": c })
+                                     }).collect();
+                                    json_rpc_ok(
+                                        req.id.clone(),
+                                        json!({ "content": [{ "type": "json", "json": { "matches": matches } }] }),
+                                    )
+                                }
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "workspace.apply_patch" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let patch = args.get("patch").and_then(|s| s.as_str());
+                        let mode = args.get("mode").and_then(|s| s.as_str());
+                        let strip = args
+                            .get("strip")
+                            .and_then(|v| v.as_u64())
+                            .map(|u| u as usize);
+                        let reject_on_conflict = args
+                            .get("reject_on_conflict")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(true);
+                        let dry_run = args
+                            .get("dry_run")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(false);
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+
+                        if let (Some(root), Some(p), Some(m)) = (repo_root, patch, mode) {
+                            match self.workspace_tools.apply_patch(
+                                std::path::Path::new(root),
+                                p,
+                                m,
+                                lease_id.map(|s| s.to_string()),
+                                snapshot_id.map(|s| s.to_string()),
+                                strip,
+                                reject_on_conflict,
+                                dry_run,
+                            ) {
+                                Ok(val) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": val }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "workspace.write_file" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str());
+                        let content = args.get("content").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let create_dirs = args
+                            .get("create_dirs")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(false);
+                        let dry_run = args
+                            .get("dry_run")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(false);
+
+                        if let (Some(root), Some(p), Some(c), Some(lid)) =
+                            (repo_root, path, content, lease_id)
+                        {
+                            match self.workspace_tools.write_file(
+                                std::path::Path::new(root),
+                                p,
+                                c,
+                                Some(lid.to_string()),
+                                create_dirs,
+                                dry_run,
+                            ) {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": { "written": res } }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
+                    }
+                    "workspace.delete" => {
+                        let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let path = args.get("path").and_then(|s| s.as_str());
+                        let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let dry_run = args
+                            .get("dry_run")
+                            .and_then(|b| b.as_bool())
+                            .unwrap_or(false);
+
+                        if let (Some(root), Some(p), Some(lid)) = (repo_root, path, lease_id) {
+                            match self.workspace_tools.delete(
+                                std::path::Path::new(root),
+                                p,
+                                Some(lid.to_string()),
+                                dry_run,
+                            ) {
+                                Ok(res) => json_rpc_ok(
+                                    req.id.clone(),
+                                    json!({ "content": [{ "type": "json", "json": { "deleted": res } }] }),
+                                ),
+                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                            }
+                        } else {
+                            json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
+                        }
                     }
                     _ => json_rpc_error(req.id.clone(), -32601, "Tool not found"),
                 }

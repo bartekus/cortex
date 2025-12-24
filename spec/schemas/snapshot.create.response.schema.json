@@ -1,0 +1,51 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.create.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.create success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "repo_root",
+                "head_sha",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "repo_root": {
+                    "$ref": "./common.schema.json#/$defs/repo_root"
+                },
+                "head_sha": {
+                    "$ref": "./common.schema.json#/$defs/sha"
+                },
+                "base_ref": {
+                    "type": "string"
+                },
+                "base_sha": {
+                    "$ref": "./common.schema.json#/$defs/sha"
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "options_hash": {
+                    "$ref": "./common.schema.json#/$defs/sha256"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

@@ -1,0 +1,328 @@
+[
+    {
+        "name": "Initialize",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "method": "initialize",
+            "params": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {},
+                "clientInfo": {
+                    "name": "golden-test",
+                    "version": "1.0"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 1,
+            "result": {
+                "protocolVersion": "2024-11-05",
+                "capabilities": {
+                    "tools": {
+                        "listChanged": true
+                    }
+                },
+                "serverInfo": {
+                    "name": "cortex-mcp",
+                    "version": "0.1.0"
+                }
+            }
+        }
+    },
+    {
+        "name": "Send Initialized Notification",
+        "request": {
+            "jsonrpc": "2.0",
+            "method": "notifications/initialized"
+        }
+    },
+    {
+        "name": "Resolve Repo",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "method": "tools/call",
+            "params": {
+                "name": "resolve_mcp",
+                "arguments": {
+                    "name": "toy-repo-01"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 3,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "status": "resolved",
+                            "root": "{{REPO_ROOT}}",
+                            "kind": "local",
+                            "resolved_id": "cortex.repo.toy-repo-01",
+                            "capabilities": [
+                                "read_file",
+                                "list_files",
+                                "search"
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "Create Snapshot",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.create",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "paths": [
+                        "src/main.rs"
+                    ]
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 4,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "snapshot_id": "{{SNAPSHOT_ID}}"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "List Snapshot (Immutable)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.list",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "mode": "snapshot",
+                    "path": ".",
+                    "snapshot_id": "{{SNAPSHOT_ID}}"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 5,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "snapshot_id": "{{SNAPSHOT_ID}}",
+                            "path": ".",
+                            "mode": "snapshot",
+                            "entries": [
+                                {
+                                    "path": "src/main.rs",
+                                    "type": "file",
+                                    "sha": "{{SHA}}"
+                                }
+                            ],
+                            "truncated": false,
+                            "cache_key": "{{SNAPSHOT_ID}}",
+                            "cache_hint": "immutable"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "Read File (Snapshot)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.file",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "mode": "snapshot",
+                    "path": "src/main.rs",
+                    "snapshot_id": "{{SNAPSHOT_ID}}"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 6,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "content": "Zm4gbWFpbigpIHsgcHJpbnRsbiEoIkhlbGxvIik7IH0K"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "Grep (Snapshot)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.grep",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "mode": "snapshot",
+                    "path": ".",
+                    "pattern": "Hello",
+                    "snapshot_id": "{{SNAPSHOT_ID}}"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 7,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "matches": [
+                                {
+                                    "file_path": "src/main.rs",
+                                    "line_number": 1,
+                                    "content": "fn main() { println!(\"Hello\"); }"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "List Worktree (Acquire Lease)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.list",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "mode": "worktree",
+                    "path": "src"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 8,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "snapshot_id": "",
+                            "path": "src",
+                            "mode": "worktree",
+                            "entries": [
+                                {
+                                    "path": "src/main.rs",
+                                    "type": "file"
+                                },
+                                {
+                                    "path": "src/utils.rs",
+                                    "type": "file"
+                                }
+                            ],
+                            "truncated": false,
+                            "lease_id": "{{LEASE_ID}}",
+                            "fingerprint": {
+                                "head_oid": "{{HEAD_OID}}",
+                                "index_oid": "{{INDEX_OID}}",
+                                "status_hash": "{{HASH}}"
+                            },
+                            "cache_key": "{{CACHE_KEY}}",
+                            "cache_hint": "until_dirty"
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "Write File (Workspace - Uses Lease)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "method": "tools/call",
+            "params": {
+                "name": "workspace.write_file",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "path": "src/new.rs",
+                    "content": "cHViIGZuIGZvbygpIHt9",
+                    "create_dirs": false,
+                    "lease_id": "{{LEASE_ID}}"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "result": {
+                "content": [
+                    {
+                        "type": "json",
+                        "json": {
+                            "written": true
+                        }
+                    }
+                ]
+            }
+        }
+    },
+    {
+        "name": "List Worktree (Verify Stale Lease)",
+        "request": {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "method": "tools/call",
+            "params": {
+                "name": "snapshot.list",
+                "arguments": {
+                    "repo_root": "{{REPO_ROOT}}",
+                    "mode": "worktree",
+                    "path": "src",
+                    "lease_id": "{{LEASE_ID}}"
+                }
+            }
+        },
+        "response": {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "error": {
+                "code": -32603,
+                "message": "__IGNORE__"
+            }
+        }
+    }
+]

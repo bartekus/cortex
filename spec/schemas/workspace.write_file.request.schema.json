@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/workspace.write_file.request.schema.json",
+    "type": "object",
+    "required": [
+        "repo_root",
+        "path",
+        "content",
+        "create_dirs",
+        "dry_run"
+    ],
+    "properties": {
+        "repo_root": {
+            "$ref": "./common.schema.json#/$defs/repo_root"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "path": {
+            "$ref": "./common.schema.json#/$defs/path"
+        },
+        "content": {
+            "$ref": "./common.schema.json#/$defs/base64"
+        },
+        "create_dirs": {
+            "type": "boolean"
+        },
+        "dry_run": {
+            "type": "boolean"
+        }
+    },
+    "additionalProperties": false
+}

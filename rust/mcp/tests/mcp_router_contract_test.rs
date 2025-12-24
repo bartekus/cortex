@@ -13,9 +13,23 @@ use std::sync::Arc;
 fn test_router_contract_routing() {
     let fs = RealFs;
     // Initialize without config for now
+    // Initialize without config for now
     let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
-    let router = Router::new(resolver, mounts);
+
+    // Tools
+    use cortex_mcp::snapshot::{lease::LeaseStore, store::BlobStore, tools::SnapshotTools};
+    use cortex_mcp::workspace::WorkspaceTools;
+
+    // db_path removed
+    // let db_path = std::env::temp_dir().join("cortex_test_db_router");
+    let blob_store = Arc::new(BlobStore::new());
+    let lease_store = Arc::new(LeaseStore::new());
+
+    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), blob_store.clone()));
+    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), blob_store.clone()));
+
+    let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
     // 1. Unknown Method -> Error -32601
     let req = JsonRpcRequest {

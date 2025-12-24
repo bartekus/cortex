@@ -1,0 +1,115 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.diff.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.diff worktree success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "path",
+                "diff",
+                "stats",
+                "lease_id",
+                "fingerprint",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "path": {
+                    "$ref": "./common.schema.json#/$defs/path"
+                },
+                "diff": {
+                    "type": "string"
+                },
+                "stats": {
+                    "type": "object",
+                    "required": [
+                        "added",
+                        "removed"
+                    ],
+                    "properties": {
+                        "added": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "removed": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "lease_id": {
+                    "$ref": "./common.schema.json#/$defs/lease_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "until_dirty"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "title": "snapshot.diff snapshot success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "path",
+                "diff",
+                "stats",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "path": {
+                    "$ref": "./common.schema.json#/$defs/path"
+                },
+                "diff": {
+                    "type": "string"
+                },
+                "stats": {
+                    "type": "object",
+                    "required": [
+                        "added",
+                        "removed"
+                    ],
+                    "properties": {
+                        "added": {
+                            "type": "integer",
+                            "minimum": 0
+                        },
+                        "removed": {
+                            "type": "integer",
+                            "minimum": 0
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

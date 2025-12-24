@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/workspace.write_file.response.schema.json",
+    "oneOf": [
+        {
+            "title": "workspace.write_file success",
+            "type": "object",
+            "required": [
+                "written"
+            ],
+            "properties": {
+                "written": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

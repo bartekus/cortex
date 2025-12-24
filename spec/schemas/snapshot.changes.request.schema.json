@@ -1,0 +1,21 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.changes.request.schema.json",
+    "type": "object",
+    "required": [
+        "snapshot_id",
+        "rename_detection"
+    ],
+    "properties": {
+        "snapshot_id": {
+            "$ref": "./common.schema.json#/$defs/snapshot_id"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "rename_detection": {
+            "$ref": "./common.schema.json#/$defs/rename_detection"
+        }
+    },
+    "additionalProperties": false
+}
