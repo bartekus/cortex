@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
 use std::path::PathBuf;
 
@@ -7,6 +7,7 @@ use std::path::PathBuf;
 
 mod canonical;
 mod digest;
+mod docs;
 mod hash;
 mod language;
 mod loc;
@@ -54,8 +55,16 @@ enum Commands {
         #[arg(long)]
         output: Option<String>,
     },
-    /// Generate documentation (placeholder)
-    Docs,
+    /// Generate documentation from index
+    Docs {
+        /// Input index.json path (default: index.json)
+        #[arg(long, default_value = "index.json")]
+        input: String,
+
+        /// Output directory (default: docs)
+        #[arg(long, default_value = "docs")]
+        output: String,
+    },
     /// Run all steps (placeholder)
     All,
 }
@@ -63,10 +72,22 @@ enum Commands {
 fn main() -> Result<()> {
     let cli = Cli::parse();
 
-    match cli.command {
-        Commands::Scan { target, output } => run_scan(&target, output),
-        Commands::Docs => {
-            println!("Docs generation not implemented yet");
+    match &cli.command {
+        Commands::Scan { target, output } => run_scan(target, output.clone()),
+        Commands::Docs { input, output } => {
+            let input_path = std::path::Path::new(input);
+            let output_path = std::path::Path::new(output);
+
+            eprintln!("Reading index from {:?}", input_path);
+            let index_bytes = std::fs::read(input_path).context("Failed to read index file")?;
+            let index: schema::XrayIndex =
+                serde_json::from_slice(&index_bytes).context("Failed to parse index JSON")?;
+
+            eprintln!("Generating docs to {:?}", output_path);
+            let generator = docs::DocsGenerator::new(&index, output_path);
+            generator.generate()?;
+
+            eprintln!("Docs generated successfully.");
             Ok(())
         }
         Commands::All => {

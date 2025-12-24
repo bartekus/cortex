@@ -26,8 +26,8 @@ fn make_valid_index() -> XrayIndex {
                 complexity: 1,
             },
         ],
-        languages: BTreeMap::new(),
-        top_dirs: BTreeMap::new(),
+        languages: BTreeMap::from([("Text".to_string(), 2)]),
+        top_dirs: BTreeMap::from([(".".to_string(), 2)]),
         module_files: vec!["a.mod".to_string(), "b.mod".to_string()],
         stats: RepoStats {
             file_count: 2,
@@ -186,4 +186,82 @@ fn test_serde_preserve_order_feature_is_active() {
         vec!["z", "a", "c"],
         "serde_json::Map must preserve insertion order! Check Cargo.toml features."
     );
+}
+
+#[test]
+fn test_validate_languages_mismatch() {
+    let mut index = make_valid_index();
+    // Valid index has "Text": 2.
+    // Let's tamper with it.
+    index.languages.insert("Go".to_string(), 1);
+
+    match to_canonical_json(&index) {
+        Ok(_) => panic!("Validation MUST fail on languages mismatch"),
+        Err(e) => assert!(
+            e.to_string().contains("Languages aggregate mismatch"),
+            "Wrong error: {}",
+            e
+        ),
+    }
+}
+
+#[test]
+fn test_validate_top_dirs_mismatch() {
+    let mut index = make_valid_index();
+    // Valid index has ".": 2.
+    // Tamper.
+    index.top_dirs.insert("src".to_string(), 1);
+
+    match to_canonical_json(&index) {
+        Ok(_) => panic!("Validation MUST fail on top_dirs mismatch"),
+        Err(e) => assert!(
+            e.to_string().contains("Top directories aggregate mismatch"),
+            "Wrong error: {}",
+            e
+        ),
+    }
+}
+
+#[test]
+fn test_validate_unknown_exclusion() {
+    use crate::schema::FileNode;
+    let mut index = make_valid_index();
+
+    // Add an "Unknown" file
+    // 1. Add file
+    index.files.push(FileNode {
+        path: "unknown.bin".to_string(),
+        size: 100,
+        hash: "x".to_string(),
+        lang: "Unknown".to_string(),
+        loc: 0,
+        complexity: 0,
+    });
+    // 2. Sort
+    index.files.sort_by(|a, b| a.path.cmp(&b.path));
+    // 3. Update stats
+    index.stats.file_count += 1;
+    index.stats.total_size += 100;
+
+    // 4. Update top_dirs (it's in root)
+    *index.top_dirs.entry(".".to_string()).or_default() += 1;
+
+    // DO NOT update languages. Unknown should NOT be in languages.
+    // This should PASS validation.
+    if let Err(e) = to_canonical_json(&index) {
+        panic!("Validation failed on valid Unknown exclusion: {}", e);
+    }
+
+    // Now, FORCE "Unknown" into languages map.
+    index.languages.insert("Unknown".to_string(), 1);
+
+    // This MUST fail.
+    match to_canonical_json(&index) {
+        Ok(_) => panic!("Validation MUST fail if Unknown is included in languages map"),
+        Err(e) => assert!(
+            e.to_string().contains("Languages aggregate mismatch"),
+            "Wrong error: {}",
+            e
+        ),
+    }
 }

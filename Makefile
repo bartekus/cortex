@@ -26,6 +26,10 @@ install:
 
 all: clean fmt-check lint test build context docs reports gov
 
+finalize: build-rust build-go;
+
+
+
 clean:
 	@rm -rf .cortex docs/__generated__
 
@@ -42,10 +46,6 @@ docs: build
 # --- Top-level targets (canonical) ---
 context: build
 	@echo " "
-	@echo "Analyzing repository structure and dependencies using xray."
-	@./bin/cortex context xray scan
-	@echo "Generating XRAY docs."
-	@./bin/cortex context xray docs
 	@echo "Generating AI context representation."
 	@./bin/cortex context build
 	@echo "Generate AI-Agent documentation."
@@ -94,7 +94,13 @@ reports: build
 	@./bin/cortex reports status-roadmap
 	@echo "Saved as docs/__generated__/feature-completion-analysis.md"
 
+validate-and-build: validate-and-build-rust validate-and-build-go
+
 build: go-build rust-build
+
+validate-and-build-go: go-fmt-check go-lint go-test go-build
+
+validate-and-build-rust: rust-fmt-check rust-lint rust-test rust-build
 
 test: go-test rust-test
 

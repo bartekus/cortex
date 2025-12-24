@@ -24,7 +24,6 @@ import (
 	"path/filepath"
 
 	"github.com/bartekus/cortex/internal/builder"
-	"github.com/bartekus/cortex/internal/contextdocs"
 	"github.com/bartekus/cortex/internal/projectroot"
 	"github.com/bartekus/cortex/internal/xray"
 
@@ -106,7 +105,7 @@ func NewContextXrayCommand() *cobra.Command {
 			return runXraySubcommand(c, "scan", xrayArgs)
 		},
 	}
-	scanCmd.Flags().String("output", "", "Output directory for index.json (default: .cortex/<slug>/data)")
+	scanCmd.Flags().String("output", "", "Output directory for index.json (default: .cortex/data)")
 	cmd.AddCommand(scanCmd)
 
 	cmd.AddCommand(&cobra.Command{
@@ -261,44 +260,36 @@ func runXraySubcommand(cmd *cobra.Command, sub string, args []string) error {
 	return nil
 }
 
-// runContextDocs executes the context:docs generation in Go.
+// runContextDocs executes the context:docs generation by invoking XRAY.
 func runContextDocs(cmd *cobra.Command, _ []string) error {
 	repoRoot, err := projectroot.Find(".")
 	if err != nil {
 		return fmt.Errorf("finding repo root: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] generating AI-Agent docs (Go projection)...\n")
+	// 1. Inputs/Outputs
+	// Standard input: .cortex/data/index.json
+	inPath := filepath.Join(repoRoot, ".cortex", "data", "index.json")
 
-	// 1. Locate Index
-	// Standard path: .cortex/data/index.json
-	indexPath := filepath.Join(repoRoot, ".cortex", "data", "index.json")
-	indexData, err := os.ReadFile(indexPath)
-	if err != nil {
-		return fmt.Errorf("reading xray index at %s: %w", indexPath, err)
-	}
-
-	var index xray.Index
-	if err := json.Unmarshal(indexData, &index); err != nil {
-		return fmt.Errorf("unmarshaling xray index: %w", err)
-	}
-
-	// 2. Resolve Output Directory
-	// Standard path: docs/__generated__/context/
+	// Standard output: docs/__generated__/context
 	outDir := filepath.Join(repoRoot, "docs", "__generated__", "context")
+
+	// Ensure output dir exists (safeguard, though XRAY creates it too)
 	if err := os.MkdirAll(outDir, 0o755); err != nil {
-		return fmt.Errorf("creating output directory %s: %w", outDir, err)
+		return fmt.Errorf("creating output directory: %w", err)
 	}
 
-	// 3. Generate Docs
-	gen := &contextdocs.Generator{
-		Index:  &index,
-		OutDir: outDir,
-	}
-	if err := gen.Generate(); err != nil {
-		return fmt.Errorf("generating docs: %w", err)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] invoking xray docs...\n")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  input:  %s\n", inPath)
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "  output: %s\n", outDir)
+
+	// 2. Call XRAY docs
+	// xray docs --input <in> --output <out>
+	xrayArgs := []string{"--input", inPath, "--output", outDir}
+	if err := runXraySubcommand(cmd, "docs", xrayArgs); err != nil {
+		return fmt.Errorf("xray docs failed: %w", err)
 	}
 
-	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] \u2713 docs generated in docs/__generated__/context/\n")
+	_, _ = fmt.Fprintf(cmd.OutOrStdout(), "[cortex] \u2713 docs generated via XRAY\n")
 	return nil
 }

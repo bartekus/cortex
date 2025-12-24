@@ -107,7 +107,8 @@ pub fn scan_target(target: &Path) -> Result<ScanResult> {
         total_size += loc_stats.size;
 
         // Compute Hash (Phase B)
-        let hash = crate::hash::compute_file_hash(path).unwrap_or_else(|_| "".to_string());
+        // Failure to hash (read error) now fails the scan to ensure integrity.
+        let hash = crate::hash::compute_file_hash(path)?;
 
         // Detect Language (Phase C1)
         let lang = crate::language::detect_language(path);
