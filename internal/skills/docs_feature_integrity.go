@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/bartekus/cortex/internal/governance/mapping"
+	"github.com/bartekus/cortex/internal/mapping"
 	"github.com/bartekus/cortex/internal/runner"
 )
 

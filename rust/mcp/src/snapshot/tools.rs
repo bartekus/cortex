@@ -8,6 +8,9 @@ use std::process::Command;
 use std::sync::Arc;
 use walkdir;
 
+// Feature: MCP_SCHEMA_LINT_RULES
+// Spec: spec/schemas/SCHEMA_LINT_RULES.md
+
 pub struct SnapshotTools {
     lease_store: Arc<LeaseStore>,
     blob_store: Arc<BlobStore>,

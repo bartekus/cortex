@@ -5,6 +5,9 @@ import { dirname } from 'path';
 import { exec, execSync, spawn } from 'child_process';
 import { RepoSetup } from './mutation.ts';
 
+// Feature: MCP_SNAPSHOT_WORKSPACE_SUBSTRATE
+// Spec: spec/mcp/snapshot-workspace-v1.md
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
@@ -22,7 +25,7 @@ fs.mkdirSync(FIXTURES_DIR, { recursive: true });
 
 // 1. Schema Lint
 console.log("Running Schema Lint...");
-const SCHEMA_LINT_PATH = path.join(__dirname, 'schema_lint.ts');
+const SCHEMA_LINT_PATH = path.join(__dirname, 'schema_lint_test.ts');
 try {
     execSync(`npx -y ts-node "${SCHEMA_LINT_PATH}"`, { stdio: 'inherit' });
 } catch (e) {

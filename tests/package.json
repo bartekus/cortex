@@ -1,7 +1,7 @@
 {
   "type": "module",
   "scripts": {
-    "test": "ts-node harness/run_golden_tests.ts"
+    "test": "ts-node harness/run_golden_test.ts"
   },
   "devDependencies": {
     "@types/node": "^25.0.3",

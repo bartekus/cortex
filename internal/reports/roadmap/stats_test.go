@@ -212,8 +212,8 @@ func TestIdentifyBlockers_NoBlockers(t *testing.T) {
 	phases["Test Phase"] = &Phase{
 		Name: "Test Phase",
 		Features: []Feature{
-			{ID: "FEATURE_1", Status: "done"},
-			{ID: "FEATURE_2", Status: "done", DependsOn: []string{"FEATURE_1"}},
+			{ID: "FEATURE_1", Implementation: "done"},
+			{ID: "FEATURE_2", Implementation: "done", DependsOn: []string{"FEATURE_1"}},
 		},
 	}
 
@@ -232,9 +232,9 @@ func TestIdentifyBlockers_AllBlocked(t *testing.T) {
 	phases["Test Phase"] = &Phase{
 		Name: "Test Phase",
 		Features: []Feature{
-			{ID: "FEATURE_1", Status: "todo"},
-			{ID: "FEATURE_2", Status: "todo", DependsOn: []string{"FEATURE_1"}},
-			{ID: "FEATURE_3", Status: "todo", DependsOn: []string{"FEATURE_2"}},
+			{ID: "FEATURE_1", Implementation: "todo"},
+			{ID: "FEATURE_2", Implementation: "todo", DependsOn: []string{"FEATURE_1"}},
+			{ID: "FEATURE_3", Implementation: "todo", DependsOn: []string{"FEATURE_2"}},
 		},
 	}
 

@@ -1,3 +1,17 @@
+---
+feature: MCP_SCHEMA_LINT_RULES
+version: v1
+status: approved
+domain: schemas
+inputs:
+  transport:
+    type: stdio
+    protocol: json-rpc-2.0
+outputs:
+  exit_codes:
+    0: 0
+    1: 1
+---
 # Schema Lint Rules
 
 The following rules are enforced by `tests/harness/schema_lint.ts` to ensure the correctness of the MCP tool schemas, specifically regarding hybrid coherence and cache safety.

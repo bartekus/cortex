@@ -6,14 +6,16 @@ features:
   # Architecture & Documentation
   - id: ARCH_OVERVIEW
     title: "Architecture documentation"
-    status: todo
+    governance: approved
+    implementation: todo
     spec: "overview.md"
     owner: bart
     tests: []
 
   - id: DOCS_ADR
     title: "ADR process"
-    status: todo
+    governance: approved
+    implementation: todo
     spec: "adr/0001-architecture.md"
     owner: bart
     tests: []
@@ -21,7 +23,8 @@ features:
   # Phase 0: Foundation
   - id: CORE_CONFIG
     title: "Config loading"
-    status: done
+    governance: approved
+    implementation: done
     spec: "core/config.md"
     owner: bart
     tests:
@@ -29,7 +32,8 @@ features:
 
   - id: CLI_INIT
     title: "Project bootstrap"
-    status: done
+    governance: approved
+    implementation: done
     spec: "commands/init.md"
     owner: bart
     tests:
@@ -37,7 +41,8 @@ features:
 
   - id: CORE_LOGGING
     title: "Logging helpers"
-    status: done
+    governance: approved
+    implementation: done
     spec: "core/logging.md"
     owner: bart
     tests:
@@ -46,7 +51,8 @@ features:
   # Phase 1: Provider Interfaces
   - id: PROVIDER_BACKEND_INTERFACE
     title: "BackendProvider interface"
-    status: done
+    governance: approved
+    implementation: done
     spec: "core/backend-registry.md"
     owner: bart
     tests:
@@ -54,7 +60,8 @@ features:
 
   - id: PROVIDER_FRONTEND_INTERFACE
     title: "FrontendProvider interface"
-    status: done
+    governance: approved
+    implementation: done
     spec: "providers/frontend/interface.md"
     owner: bart
     tests:
@@ -62,7 +69,8 @@ features:
 
   - id: PROVIDER_NETWORK_INTERFACE
     title: "NetworkProvider interface"
-    status: wip
+    governance: approved
+    implementation: wip
     spec: "providers/network/interface.md"
     owner: bart
     tests: []
@@ -70,7 +78,8 @@ features:
   # Phase 2: Core Orchestration
   - id: CORE_PLAN
     title: "Deployment planning"
-    status: done
+    governance: approved
+    implementation: done
     spec: "core/plan.md"
     owner: bart
     tests:
@@ -78,7 +87,8 @@ features:
 
   - id: CORE_STATE
     title: "State management"
-    status: done
+    governance: approved
+    implementation: done
     spec: "core/state.md"
     owner: bart
     tests:
@@ -86,7 +96,8 @@ features:
 
   - id: CLI_DEPLOY
     title: "Deploy command"
-    status: todo
+    governance: approved
+    implementation: todo
     spec: "commands/deploy.md"
     owner: bart
     depends_on:
@@ -97,7 +108,8 @@ features:
   # Phase 3: Local Development
   - id: CLI_DEV
     title: "Dev command"
-    status: wip
+    governance: approved
+    implementation: wip
     spec: "commands/dev.md"
     owner: bart
     depends_on:
@@ -106,7 +118,8 @@ features:
 
   - id: DEV_HOSTS
     title: "Hosts management"
-    status: todo
+    governance: approved
+    implementation: todo
     spec: "commands/dev.md"
     owner: bart
     depends_on:
@@ -116,7 +129,8 @@ features:
   # Governance
   - id: CLI_COMMAND_GOV
     title: "Governance core"
-    status: done
+    governance: approved
+    implementation: done
     spec: "governance/CLI_COMMAND_GOV.md"
     owner: bart
     tests:
@@ -124,7 +138,8 @@ features:
 
   - id: CLI_COMMAND_STATUS
     title: "Status roadmap command"
-    status: todo
+    governance: approved
+    implementation: todo
     spec: "commands/status-roadmap.md"
     owner: bart
     depends_on:

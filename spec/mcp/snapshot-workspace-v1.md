@@ -1,3 +1,17 @@
+---
+feature: MCP_SNAPSHOT_WORKSPACE_SUBSTRATE
+version: v1
+status: approved
+domain: mcp
+inputs:
+  transport:
+    type: stdio
+    protocol: json-rpc-2.0
+outputs:
+  exit_codes:
+    0: 0
+    1: 1
+---
 # MCP Snapshot & Workspace Substrate (v1)
 
 This specification defines the deterministic `snapshot` and `workspace` tools for MCP. It enforces strict determinism, hybrid coherence (leases vs. immutable snapshots), and safe write operations.

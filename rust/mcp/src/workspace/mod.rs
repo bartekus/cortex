@@ -5,6 +5,9 @@ use anyhow::{anyhow, Context, Result};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
+// Feature: MCP_SNAPSHOT_WORKSPACE_SUBSTRATE
+// Spec: spec/mcp/snapshot-workspace-v1.md
+
 pub struct WorkspaceTools {
     pub lease_store: Arc<LeaseStore>,
     pub blob_store: Arc<BlobStore>,
