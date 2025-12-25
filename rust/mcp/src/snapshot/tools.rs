@@ -399,10 +399,12 @@ impl SnapshotTools {
                 .find(|e| e.path == path)
                 .ok_or_else(|| anyhow!("File not found in snapshot: {}", path))?;
 
-            let content = self
-                .store
-                .get_blob(&entry.blob)?
-                .ok_or_else(|| anyhow!("Snapshot corrupted: referenced blob {} not found in store", entry.blob))?;
+            let content = self.store.get_blob(&entry.blob)?.ok_or_else(|| {
+                anyhow!(
+                    "Snapshot corrupted: referenced blob {} not found in store",
+                    entry.blob
+                )
+            })?;
 
             use base64::{engine::general_purpose, Engine as _};
             let encoded = general_purpose::STANDARD.encode(&content);

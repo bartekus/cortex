@@ -14,7 +14,8 @@ fn test_persistence_survives_restart() -> anyhow::Result<()> {
     };
 
     let content = b"Hello Persistence";
-    let snap_id = "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
+    let snap_id =
+        "sha256:1111111111111111111111111111111111111111111111111111111111111111".to_string();
     let blob_hash_expected = {
         let store = Store::new(config.clone())?;
         let hash = store.put_blob(content)?;
