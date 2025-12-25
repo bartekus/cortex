@@ -189,7 +189,7 @@ impl SnapshotTools {
             // Snapshot mode
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
-            
+
             // Validate snapshot integrity first
             self.store.validate_snapshot(&snap_id)?;
 
@@ -210,7 +210,7 @@ impl SnapshotTools {
 
             for entry in manifest_entries {
                 // Ensure path is valid (should be covered by validate_snapshot but good to be safe)
-                // Store::validate_path(&entry.path)?; 
+                // Store::validate_path(&entry.path)?;
 
                 if path.is_empty() || entry.path.starts_with(path) {
                     let relative = if path.is_empty() {
@@ -399,7 +399,7 @@ impl SnapshotTools {
         } else if mode == "snapshot" {
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
-            
+
             // Validate snapshot integrity first
             self.store.validate_snapshot(&snap_id)?;
 
@@ -552,7 +552,7 @@ impl SnapshotTools {
             let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
             // Validate snapshot integrity first
             self.store.validate_snapshot(&sid)?;
-            
+
             Ok(json!({
                 "snapshot_id": sid, // Should be actual ID
                 "query": pattern,

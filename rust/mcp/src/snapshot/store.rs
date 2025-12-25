@@ -443,7 +443,10 @@ impl Store {
         // Check for .. segments
         for component in std::path::Path::new(path).components() {
             if matches!(component, std::path::Component::ParentDir) {
-                return Err(anyhow!("Parent directory segments (..) not allowed: {}", path));
+                return Err(anyhow!(
+                    "Parent directory segments (..) not allowed: {}",
+                    path
+                ));
             }
         }
         Ok(())
@@ -451,13 +454,16 @@ impl Store {
 
     pub fn validate_snapshot(&self, id: &str) -> Result<()> {
         let conn = self.conn.lock().unwrap();
-        
+
         // 1. Check snapshot existence
-        let exists: bool = conn.query_row(
-            "SELECT 1 FROM snapshots WHERE snapshot_id = ?1",
-            params![id],
-            |_| Ok(true)
-        ).optional()?.unwrap_or(false);
+        let exists: bool = conn
+            .query_row(
+                "SELECT 1 FROM snapshots WHERE snapshot_id = ?1",
+                params![id],
+                |_| Ok(true),
+            )
+            .optional()?
+            .unwrap_or(false);
 
         if !exists {
             return Err(anyhow!("Snapshot not found: {}", id));
@@ -467,22 +473,23 @@ impl Store {
         // We use list_snapshot_entries logic but inline to avoid lock issues if we were holding it?
         // Actually list_snapshot_entries takes a lock. We currently hold a lock `conn`.
         // We should drop lock before calling other methods if they take lock.
-        drop(conn); 
+        drop(conn);
 
         let entries = self.list_snapshot_entries(id)?;
-        
+
         // 3. Verify entries are sorted and unique
         // list_snapshot_entries sorts by path. We just need to check unicity?
         // SQLite PK is (snapshot_id, path), so uniqueness of path is enforced by DB.
         // We just check that paths are valid?
         for (i, entry) in entries.iter().enumerate() {
             Self::validate_path(&entry.path)?;
-            
+
             // Check sorting (paranoid check)
-            if i > 0 {
-                if entry.path <= entries[i-1].path {
-                    return Err(anyhow!("Manifest not sorted or duplicate paths at index {}", i));
-                }
+            if i > 0 && entry.path <= entries[i - 1].path {
+                return Err(anyhow!(
+                    "Manifest not sorted or duplicate paths at index {}",
+                    i
+                ));
             }
         }
 
@@ -492,20 +499,29 @@ impl Store {
         for entry in &entries {
             // Check DB
             let conn = self.conn.lock().unwrap();
-            let blob_exists: bool = conn.query_row(
-                "SELECT 1 FROM blobs WHERE hash = ?1",
-                params![entry.blob],
-                |_| Ok(true)
-            ).optional()?.unwrap_or(false);
+            let blob_exists: bool = conn
+                .query_row(
+                    "SELECT 1 FROM blobs WHERE hash = ?1",
+                    params![entry.blob],
+                    |_| Ok(true),
+                )
+                .optional()?
+                .unwrap_or(false);
             drop(conn);
 
             if !blob_exists {
-                return Err(anyhow!("Snapshot corrupt: missing blob DB entry for {}", entry.blob));
+                return Err(anyhow!(
+                    "Snapshot corrupt: missing blob DB entry for {}",
+                    entry.blob
+                ));
             }
 
             // Check backend
             if !self.blob_store.has(&entry.blob)? {
-                return Err(anyhow!("Snapshot corrupt: missing blob content for {}", entry.blob));
+                return Err(anyhow!(
+                    "Snapshot corrupt: missing blob content for {}",
+                    entry.blob
+                ));
             }
         }
 
@@ -521,7 +537,7 @@ mod tests {
     fn test_validate_path() {
         assert!(Store::validate_path("foo.txt").is_ok());
         assert!(Store::validate_path("foo/bar.txt").is_ok());
-        
+
         assert!(Store::validate_path("/abs/path").is_err());
         assert!(Store::validate_path("foo/../bar").is_err());
         assert!(Store::validate_path("foo\\bar").is_err());
@@ -536,33 +552,46 @@ mod tests {
             compression: Compression::None,
         };
         let store = Store::new(config).unwrap();
-        
+
         // Create a blob
         let blob_hash = store.put_blob(b"hello").unwrap();
-        
+
         // Create snapshot
         let manifest_bytes = r#"{
             "entries": [
                 { "path": "test.txt", "blob": "__BLOB_HASH__", "size": 5 }
             ]
-        }"#.replace("__BLOB_HASH__", &blob_hash);
+        }"#
+        .replace("__BLOB_HASH__", &blob_hash);
 
         let sid = "snap1";
-        store.put_snapshot(sid, "/repo", "headsha", "{}", manifest_bytes.as_bytes()).unwrap();
+        store
+            .put_snapshot(sid, "/repo", "headsha", "{}", manifest_bytes.as_bytes())
+            .unwrap();
 
         // Valid
         assert!(store.validate_snapshot(sid).is_ok());
 
         // Corrupt backend: delete blob file
-        let blob_path = dir.path().join("blobs").join(blob_hash.split(':').nth(0).unwrap()).join(&blob_hash.split(':').nth(1).unwrap()[..2]).join(blob_hash.split(':').nth(1).unwrap());
+        let blob_path = dir
+            .path()
+            .join("blobs")
+            .join(blob_hash.split(':').next().unwrap())
+            .join(&blob_hash.split(':').nth(1).unwrap()[..2])
+            .join(blob_hash.split(':').nth(1).unwrap());
         if blob_path.exists() {
-             std::fs::remove_file(blob_path).unwrap();
+            std::fs::remove_file(blob_path).unwrap();
         } else {
-             // It might be nested differently, let's use internal knowledge or just iterate
-             // FsBlobStore::path_for logic: algo/prefix/hash
-             let parts: Vec<&str> = blob_hash.split(':').collect();
-             let path = dir.path().join("blobs").join(parts[0]).join(&parts[1][0..2]).join(parts[1]);
-             std::fs::remove_file(path).unwrap();
+            // It might be nested differently, let's use internal knowledge or just iterate
+            // FsBlobStore::path_for logic: algo/prefix/hash
+            let parts: Vec<&str> = blob_hash.split(':').collect();
+            let path = dir
+                .path()
+                .join("blobs")
+                .join(parts[0])
+                .join(&parts[1][0..2])
+                .join(parts[1]);
+            std::fs::remove_file(path).unwrap();
         }
 
         // Should fail
