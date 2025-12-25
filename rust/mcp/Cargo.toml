@@ -21,6 +21,8 @@ zstd = "0.13"
 tempfile = "3.8"
 # Optional async runtime for future rmcp support
 tokio = { version = "1.0", features = ["full"], optional = true }
+similar = "2.7.0"
+tar = "0.4.44"
 
 [features]
 default = ["transport-stdio", "resolver-local", "skills-core"]

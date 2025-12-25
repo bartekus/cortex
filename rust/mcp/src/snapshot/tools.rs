@@ -1,6 +1,7 @@
 use crate::snapshot::lease::{Fingerprint, LeaseStore};
 use crate::snapshot::store::{Entry, Manifest, Store};
 use anyhow::{anyhow, Result};
+use base64::Engine;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -189,6 +190,10 @@ impl SnapshotTools {
             // Snapshot mode
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
+
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&snap_id)?;
+
             let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
 
             // Filter by prefix/path?
@@ -205,6 +210,9 @@ impl SnapshotTools {
             let mut dirs_seen = std::collections::HashSet::new();
 
             for entry in manifest_entries {
+                // Ensure path is valid (should be covered by validate_snapshot but good to be safe)
+                // Store::validate_path(&entry.path)?;
+
                 if path.is_empty() || entry.path.starts_with(path) {
                     let relative = if path.is_empty() {
                         entry.path.clone()
@@ -300,6 +308,9 @@ impl SnapshotTools {
 
         let mut entries = Vec::new();
         for path_str in files_to_capture {
+            // Validate path format
+            Store::validate_path(&path_str)?;
+
             let p = self.resolve_path(&repo_root, &path_str)?;
             if p.is_file() {
                 let content = std::fs::read(&p)?;
@@ -389,7 +400,10 @@ impl SnapshotTools {
         } else if mode == "snapshot" {
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
-            // retrieve manifest
+
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&snap_id)?;
+
             // retrieve manifest
             let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
 
@@ -536,14 +550,92 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else {
-            let _sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&sid)?;
+
+            let manifest_entries = self.store.list_snapshot_entries(&sid)?;
+
+            let mut matches: Vec<serde_json::Value> = Vec::new();
+            let mut truncated = false;
+            let mut total_matches = 0;
+
+            // Filter by paths if provided
+            let mut candidate_entries = Vec::new();
+            if let Some(ref p_list) = paths {
+                for entry in manifest_entries {
+                    // Check if entry.path is in p_list or starts with one of them + /
+                    // Simple prefix check isn't enough because "src/foobar" shouldn't match "src/foo".
+                    // Logic: for each p in p_list:
+                    // if p == entry.path OR entry.path.starts_with(p + "/")
+                    let mut keep = false;
+                    for p in p_list {
+                        if entry.path == *p || entry.path.starts_with(&format!("{}/", p)) {
+                            keep = true;
+                            break;
+                        }
+                    }
+                    if keep {
+                        candidate_entries.push(entry);
+                    }
+                }
+            } else {
+                candidate_entries = manifest_entries;
+            }
+
+            // Iterate candidates (already sorted by manifest order)
+            for entry in candidate_entries {
+                if truncated {
+                    break;
+                }
+
+                // Get blob content
+                if let Some(content) = self.store.get_blob(&entry.blob)? {
+                    // Binary check
+                    if content.iter().take(512).any(|&b| b == 0) {
+                        continue;
+                    }
+
+                    // Decode as string
+                    // If valid utf8?
+                    if let Ok(text) = String::from_utf8(content) {
+                        let mut file_lines = Vec::new();
+                        for (i, line) in text.lines().enumerate() {
+                            if re.is_match(line) {
+                                file_lines.push(json!({
+                                    "line": i + 1,
+                                    "col": 1,
+                                    "text": line
+                                }));
+                                total_matches += 1;
+                                if total_matches >= 100 {
+                                    truncated = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if !file_lines.is_empty() {
+                            matches.push(json!({
+                                "path": entry.path,
+                                "lines": file_lines
+                            }));
+                        }
+                    }
+                } else {
+                    // Missing blob? store.get_blob returns None if not found in db/fs.
+                    // validate_snapshot should have caught this, but safeguard:
+                    return Err(anyhow!("Snapshot missing blob: {}", entry.blob));
+                }
+            }
+
             Ok(json!({
-                "snapshot_id": _sid, // Should be actual ID
+                "snapshot_id": sid,
                 "query": pattern,
                 "mode": "snapshot",
-                "matches": [],
-                "truncated": false,
-                "cache_key": "stub",
+                "matches": matches,
+                "truncated": truncated,
+                "cache_key": sid, // In snapshot mode, result stable for (sid, pattern)
                 "cache_hint": "immutable"
             }))
         }
@@ -555,6 +647,8 @@ impl SnapshotTools {
         path: &str,
         mode: &str,
         lease_id: Option<String>,
+        snapshot_id: Option<String>,
+        from_snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let repo_root = repo_root.canonicalize()?;
 
@@ -565,9 +659,6 @@ impl SnapshotTools {
             // `git diff -- path`
             // touches target
             self.lease_store.touch_files(&lid, vec![path.to_string()]);
-
-            // Comparison to empty handled?
-            // "if path.is_empty()"
 
             // run git diff
             let output = Command::new("git")
@@ -585,19 +676,175 @@ impl SnapshotTools {
                 "cache_key": format!("{}:diff:{}", lid, fp.status_hash),
                 "cache_hint": "until_dirty"
             }))
+        } else if mode == "snapshot" {
+            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            self.store.validate_snapshot(&sid)?;
+
+            // Get content from target snapshot
+            let mut target_content = String::new();
+            let mut target_found = false;
+
+            // Find entry in snapshot
+            if let Ok(entries) = self.store.list_snapshot_entries(&sid) {
+                if let Some(entry) = entries.iter().find(|e| e.path == path) {
+                    if let Some(blob) = self.store.get_blob(&entry.blob)? {
+                        // Try decode utf8, if binary?
+                        // similar can diff bytes but usually we diff text.
+                        // If binary, return empty or "Binary files differ"?
+                        if blob.iter().take(512).any(|&b| b == 0) {
+                            return Ok(json!({
+                                "diff": format!("Binary files a/{} and b/{} differ", path, path),
+                                "snapshot_id": sid,
+                                "cache_hint": "immutable"
+                            }));
+                        }
+                        target_content = String::from_utf8_lossy(&blob).to_string();
+                        target_found = true;
+                    }
+                }
+            }
+
+            // Get content from base snapshot (if provided)
+            let mut base_content = String::new();
+            let mut base_found = false;
+
+            if let Some(from_sid) = from_snapshot_id {
+                self.store.validate_snapshot(&from_sid)?;
+                if let Ok(entries) = self.store.list_snapshot_entries(&from_sid) {
+                    if let Some(entry) = entries.iter().find(|e| e.path == path) {
+                        if let Some(blob) = self.store.get_blob(&entry.blob)? {
+                            if blob.iter().take(512).any(|&b| b == 0) {
+                                // Base is binary.
+                                // If target also binary, handled above?
+                                // If target text, base binary -> "Binary files differ"?
+                                return Ok(json!({
+                                    "diff": format!("Binary files a/{} and b/{} differ", path, path),
+                                    "snapshot_id": sid,
+                                    "cache_hint": "immutable"
+                                }));
+                            }
+                            base_content = String::from_utf8_lossy(&blob).to_string();
+                            base_found = true;
+                        }
+                    }
+                }
+            }
+
+            // If neither found, empty diff (or error?)
+            if !target_found && !base_found {
+                return Err(anyhow!("Path not found in either snapshot: {}", path));
+            }
+
+            // Compute diff
+            use similar::{ChangeTag, TextDiff};
+
+            let diff = TextDiff::from_lines(&base_content, &target_content);
+            let mut diff_str = String::new();
+
+            // Imitate git unified diff header
+            // "diff --git a/path b/path"
+            // "index ..."
+            // "--- a/path"
+            // "+++ b/path"
+
+            // Only if different
+            if base_content != target_content {
+                diff_str.push_str(&format!("diff --git a/{} b/{}\n", path, path));
+                // index? stub
+                if !base_found {
+                    diff_str.push_str(&format!(
+                        "new file mode 100644\n--- /dev/null\n+++ b/{}\n",
+                        path
+                    ));
+                } else if !target_found {
+                    diff_str.push_str(&format!(
+                        "deleted file mode 100644\n--- a/{}\n+++ /dev/null\n",
+                        path
+                    ));
+                } else {
+                    diff_str.push_str(&format!("--- a/{}\n+++ b/{}\n", path, path));
+                }
+
+                for group in diff.grouped_ops(3) {
+                    for op in group {
+                        for change in diff.iter_changes(&op) {
+                            let sign = match change.tag() {
+                                ChangeTag::Delete => "-",
+                                ChangeTag::Insert => "+",
+                                ChangeTag::Equal => " ",
+                            };
+                            diff_str.push_str(&format!("{}{}", sign, change));
+                        }
+                    }
+                }
+            }
+
+            Ok(json!({
+                "diff": diff_str,
+                "snapshot_id": sid,
+                "cache_key": sid,
+                "cache_hint": "immutable"
+            }))
         } else {
-            Err(anyhow!("Snapshot mode diff not implemented"))
+            Err(anyhow!("Invalid mode"))
         }
     }
     pub fn snapshot_changes(
         &self,
         _repo_root: &Path,
         snapshot_id: Option<String>,
+        from_snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+        self.store.validate_snapshot(&snap_id)?;
+
+        let mut changes = Vec::new();
+
+        if let Some(from_sid) = from_snapshot_id {
+            self.store.validate_snapshot(&from_sid)?;
+
+            let target_entries = self.store.list_snapshot_entries(&snap_id)?;
+            let base_entries = self.store.list_snapshot_entries(&from_sid)?;
+
+            // Use maps for easier lookup? list_snapshot_entries returns sorted Vec<Entry>.
+            // Since sorted, we can iterate in parallel or use map. Map is easier.
+            use std::collections::HashMap;
+            let target_map: HashMap<_, _> =
+                target_entries.iter().map(|e| (&e.path, &e.blob)).collect();
+            let base_map: HashMap<_, _> = base_entries.iter().map(|e| (&e.path, &e.blob)).collect();
+
+            // Check for modified and added
+            for (path, blob) in &target_map {
+                match base_map.get(path) {
+                    Some(base_blob) => {
+                        if blob != base_blob {
+                            changes.push(json!({ "path": path, "type": "modified" }));
+                        }
+                    }
+                    None => {
+                        changes.push(json!({ "path": path, "type": "added" }));
+                    }
+                }
+            }
+
+            // Check for deleted
+            for path in base_map.keys() {
+                if !target_map.contains_key(path) {
+                    changes.push(json!({ "path": path, "type": "deleted" }));
+                }
+            }
+        }
+
+        // Sort changes by path for determinism
+        changes.sort_by(|a, b| {
+            let pa = a["path"].as_str().unwrap();
+            let pb = b["path"].as_str().unwrap();
+            pa.cmp(pb)
+        });
+
         Ok(json!({
              "snapshot_id": snap_id,
-             "files_changed": [], // stub
+             "files_changed": changes,
              "cache_hint": "immutable"
         }))
     }
@@ -607,19 +854,57 @@ impl SnapshotTools {
         _repo_root: &Path,
         snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
-        // Export bundle.
-        // For snapshot-only, retrieve snapshot manifest and build bundle.
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+        // Validate snapshot integrity first
+        self.store.validate_snapshot(&snap_id)?;
+
+        let entries = self.store.list_snapshot_entries(&snap_id)?;
+        let mut tar_builder = tar::Builder::new(Vec::new());
+
+        // Sort entries by path for deterministic order (list_snapshot_entries already sorts, but verify?)
+        // Store implementation ensures sort.
+
+        let mut included_files = 0;
+        let mut total_bytes = 0;
+
+        for entry in entries {
+            if let Some(content) = self.store.get_blob(&entry.blob)? {
+                let mut header = tar::Header::new_gnu();
+                header.set_size(content.len() as u64);
+                header.set_mode(0o644); // Regular file
+                header.set_mtime(0); // Epoch for determinism
+                header.set_uid(0);
+                header.set_gid(0);
+                header.set_cksum();
+
+                // Use entry.path as path in tar
+                // Ensure no leading slash for tar safety?
+                // entry.path is relative "a/b/c.txt".
+                tar_builder.append_data(&mut header, &entry.path, &content[..])?;
+
+                included_files += 1;
+                total_bytes += content.len();
+            } else {
+                return Err(anyhow!("Missing blob for {}", entry.path));
+            }
+        }
+
+        // Include manifest.json?
+        // Maybe useful metadata.
+        // Let's stick to just the files for now - user wants the WORKSPACE state exported.
+
+        let tar_bytes = tar_builder.into_inner()?;
+        let encoded_bundle = base64::engine::general_purpose::STANDARD.encode(&tar_bytes);
 
         Ok(json!({
             "snapshot_id": snap_id,
             "format": "tar",
             "summary": {
-                "included_files": 0,
-                "included_diffs": 0,
+                "included_files": included_files,
+                "included_bytes": total_bytes,
                 "truncated": false
             },
-            "bundle": "base64:...",
+            "bundle": format!("base64:{}", encoded_bundle),
             "cache_key": snap_id,
             "cache_hint": "immutable"
         }))
@@ -635,5 +920,427 @@ impl SnapshotTools {
            },
            "cache_hint": "until_dirty"
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{BlobBackend, Compression, StorageConfig};
+    use crate::snapshot::lease::LeaseStore;
+
+    #[test]
+    fn test_snapshot_grep_basics() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        // Lease store needed but not used for snapshot-only mode
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Create blobs
+        let t1 = "line one\nline MATCH two\nline three";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+
+        let t2 = "another file\nnothing interesting here";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        // Binary blob
+        let mut b_data = vec![0u8; 10];
+        b_data.extend_from_slice(b"match in binary");
+        let h_bin = store.put_blob(&b_data).unwrap();
+
+        // Create snapshot with ordered paths
+        let manifest_bytes = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a/text1.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b/binary.bin", "blob": "{}", "size": {} }},
+                {{ "path": "c/text2.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h_bin,
+            b_data.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid = "snap-grep";
+        // put_snapshot uses string, need valid path?
+        // put_snapshot arguments are metadata, repo_root doesn't need to exist for put_snapshot storage,
+        // BUT snapshot_grep calls canonicalize(repo_root).
+        // So we must pass `dir.path()` (which exists) to grep.
+        store
+            .put_snapshot(
+                sid,
+                dir.path().to_str().unwrap(),
+                "sha-HEAD",
+                "{}",
+                manifest_bytes.as_bytes(),
+            )
+            .unwrap();
+
+        // 1. Grep all - should find matches in text1, skip binary
+        let res = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                None,
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true, // case insensitive
+            )
+            .unwrap();
+
+        let matches = res["matches"].as_array().unwrap();
+        assert_eq!(matches.len(), 1); // text1 only. binary skipped. text2 no match.
+        assert_eq!(matches[0]["path"], "a/text1.txt");
+        assert_eq!(matches[0]["lines"][0]["text"], "line MATCH two");
+
+        // 2. Grep with path filter
+        let res2 = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                Some(vec!["c".to_string()]),
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true,
+            )
+            .unwrap();
+        assert!(res2["matches"].as_array().unwrap().is_empty()); // c/text2 has no match
+
+        let res3 = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                Some(vec!["a".to_string()]),
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true,
+            )
+            .unwrap();
+        assert_eq!(res3["matches"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_snapshot_diff() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Snapshot 1 (Base)
+        // a.txt: "version1"
+        // b.txt: "deleted later"
+        let t1 = "version1\n";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = "deleted later\n";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid1 = "snap1";
+        store
+            .put_snapshot(
+                sid1,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+            )
+            .unwrap();
+
+        // Snapshot 2 (Target)
+        // a.txt: "version2"
+        // c.txt: "new file"
+        // b.txt missing (deleted)
+        let t3 = "version2\n";
+        let h3 = store.put_blob(t3.as_bytes()).unwrap();
+        let t4 = "new file\n";
+        let h4 = store.put_blob(t4.as_bytes()).unwrap();
+
+        let m2 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "c.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h3,
+            t3.len(),
+            h4,
+            t4.len()
+        );
+
+        let sid2 = "snap2";
+        store
+            .put_snapshot(
+                sid2,
+                dir.path().to_str().unwrap(),
+                "h2",
+                "{}",
+                m2.as_bytes(),
+            )
+            .unwrap();
+
+        // 1. Diff a.txt (Modified)
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "a.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff a.txt:\n{}", diff);
+        assert!(diff.contains("--- a/a.txt"));
+        assert!(diff.contains("+++ b/a.txt"));
+        assert!(diff.contains("-version1"));
+        assert!(diff.contains("+version2"));
+
+        // 2. Diff b.txt (Deleted in snap2)
+        // Note: snapshot_diff iterates both snapshots to find blobs.
+        // If file not in target but in base -> deleted.
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "b.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff b.txt:\n{}", diff);
+        assert!(diff.contains("deleted file"));
+        assert!(diff.contains("--- a/b.txt"));
+        assert!(diff.contains("+++ /dev/null"));
+        assert!(diff.contains("-deleted later"));
+
+        // 3. Diff c.txt (New in snap2)
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "c.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff c.txt:\n{}", diff);
+        assert!(diff.contains("new file"));
+        assert!(diff.contains("--- /dev/null"));
+        assert!(diff.contains("+++ b/c.txt"));
+        assert!(diff.contains("+new file"));
+    }
+
+    #[test]
+    fn test_snapshot_export() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Create content
+        let t1 = "export me";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let h2 = store.put_blob(&t2).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b/data.bin", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid = "snap-export";
+        store
+            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .unwrap();
+
+        // Export
+        let res = tools
+            .snapshot_export(dir.path(), Some(sid.to_string()))
+            .unwrap();
+        let bundle_b64 = res["bundle"]
+            .as_str()
+            .unwrap()
+            .strip_prefix("base64:")
+            .unwrap();
+        let tar_bytes = base64::engine::general_purpose::STANDARD
+            .decode(bundle_b64)
+            .unwrap();
+
+        // Verify tar content
+        let mut archive = tar::Archive::new(&tar_bytes[..]);
+        let mut found_a = false;
+        let mut found_b = false;
+
+        for file in archive.entries().unwrap() {
+            let mut file = file.unwrap();
+            let path = file.path().unwrap().into_owned();
+
+            if path.to_str().unwrap() == "a.txt" {
+                found_a = true;
+                let mut s = String::new();
+                use std::io::Read;
+                file.read_to_string(&mut s).unwrap();
+                assert_eq!(s, "export me");
+                assert_eq!(file.header().mtime().unwrap(), 0); // Determinism check
+            } else if path.to_str().unwrap() == "b/data.bin" {
+                found_b = true;
+                let mut v = Vec::new();
+                use std::io::Read;
+                file.read_to_end(&mut v).unwrap();
+                assert_eq!(v, vec![0xDE, 0xAD, 0xBE, 0xEF]);
+            }
+        }
+
+        assert!(found_a);
+        assert!(found_b);
+
+        // Determinism Check
+        let res2 = tools
+            .snapshot_export(dir.path(), Some(sid.to_string()))
+            .unwrap();
+        assert_eq!(res["bundle"], res2["bundle"]);
+    }
+
+    #[test]
+    fn test_snapshot_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Base Snapshot
+        let t1 = "base-version";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = "will-delete";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid1 = "snap-base";
+        store
+            .put_snapshot(
+                sid1,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+            )
+            .unwrap();
+
+        // Target Snapshot
+        let t3 = "target-version"; // modified
+        let h3 = store.put_blob(t3.as_bytes()).unwrap();
+        let t4 = "new-file"; // added
+        let h4 = store.put_blob(t4.as_bytes()).unwrap();
+
+        let m2 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "c.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h3,
+            t3.len(),
+            h4,
+            t4.len()
+        );
+
+        let sid2 = "snap-target";
+        store
+            .put_snapshot(
+                sid2,
+                dir.path().to_str().unwrap(),
+                "h2",
+                "{}",
+                m2.as_bytes(),
+            )
+            .unwrap();
+
+        // Check changes
+        let res = tools
+            .snapshot_changes(dir.path(), Some(sid2.to_string()), Some(sid1.to_string()))
+            .unwrap();
+
+        let changes = res["files_changed"].as_array().unwrap();
+        assert_eq!(changes.len(), 3);
+
+        // changes are sorted by path: a.txt, b.txt, c.txt
+        let c0 = &changes[0];
+        assert_eq!(c0["path"], "a.txt");
+        assert_eq!(c0["type"], "modified");
+
+        let c1 = &changes[1];
+        assert_eq!(c1["path"], "b.txt");
+        assert_eq!(c1["type"], "deleted");
+
+        let c2 = &changes[2];
+        assert_eq!(c2["path"], "c.txt");
+        assert_eq!(c2["type"], "added");
     }
 }

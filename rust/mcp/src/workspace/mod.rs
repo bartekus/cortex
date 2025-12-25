@@ -184,8 +184,116 @@ impl WorkspaceTools {
                 }))
             }
         } else if mode == "snapshot" {
-            // Snapshot mode: In-memory patching not implemented
-            Err(anyhow!("Snapshot mode patching not implemented"))
+            let snap_id = _snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            self.store.validate_snapshot(&snap_id)?;
+
+            // 1. Materialize to temp dir
+            let temp = tempfile::tempdir()?;
+            let temp_path = temp.path();
+            let entries = self.store.list_snapshot_entries(&snap_id)?;
+
+            for entry in entries {
+                if let Some(content) = self.store.get_blob(&entry.blob)? {
+                    let full_path = temp_path.join(&entry.path);
+                    if let Some(parent) = full_path.parent() {
+                        std::fs::create_dir_all(parent)?;
+                    }
+                    std::fs::write(&full_path, content)?;
+                } else {
+                    return Err(anyhow::anyhow!("Missing blob for {}", entry.path));
+                }
+            }
+
+            // 2. Apply patch
+            let mut cmd = std::process::Command::new("git");
+            cmd.arg("apply");
+            cmd.arg("--verbose");
+            if let Some(n) = strip {
+                cmd.arg(format!("-p{}", n));
+            }
+
+            cmd.current_dir(temp_path);
+            cmd.stdin(std::process::Stdio::piped());
+            cmd.stdout(std::process::Stdio::piped());
+            cmd.stderr(std::process::Stdio::piped());
+
+            let mut child = cmd.spawn()?;
+            if let Some(mut stdin) = child.stdin.take() {
+                use std::io::Write;
+                stdin.write_all(patch.as_bytes())?;
+            }
+
+            let output = child.wait_with_output()?;
+
+            if output.status.success() {
+                // 3. Ingest changes
+                // Walk temp dir to find all current files
+                use walkdir::WalkDir;
+                let mut new_entries = Vec::new();
+                for entry in WalkDir::new(temp_path) {
+                    let entry = entry?;
+                    if entry.file_type().is_file() {
+                        let path = entry.path();
+                        let rel_path = path.strip_prefix(temp_path)?.to_str().unwrap().to_string();
+                        // Validate path safety/ignored? Assuming temp dir is controlled.
+
+                        let content = std::fs::read(path)?;
+                        let blob_id = self.store.put_blob(&content)?;
+
+                        new_entries.push(crate::snapshot::store::Entry {
+                            path: rel_path,
+                            blob: blob_id,
+                            size: content.len() as u64,
+                        });
+                    }
+                }
+
+                // Create new snapshot
+                let new_manifest = crate::snapshot::store::Manifest {
+                    entries: new_entries,
+                };
+                let manifest_json = serde_json::to_string(&new_manifest)?;
+                // Generate deterministic ID or random?
+                // Let's use SHA256 of manifest for determinism?
+                // Or UUID? Currently tests use "snap1".
+                // Let's use "snap-" + uuid.
+                use uuid::Uuid;
+                let new_snap_id = format!("snap-{}", Uuid::new_v4());
+
+                // Need a way to put snapshot easily. `store.put_snapshot` takes raw args.
+                // We need to re-calc header/etc.
+                // `Store::put_snapshot` expects `manifest_hash`, `manifest_content`.
+                // Compute hash
+                use sha2::{Digest, Sha256};
+                let mut hasher = Sha256::new();
+                hasher.update(manifest_json.as_bytes());
+                let result = hasher.finalize();
+                let manifest_hash = hex::encode(result);
+
+                self.store.put_snapshot(
+                    &new_snap_id,
+                    repo_root.to_str().unwrap_or(""),
+                    &manifest_hash,
+                    "{}", // Empty meta for now? Or copy old?
+                    manifest_json.as_bytes(),
+                )?;
+
+                Ok(serde_json::json!({
+                    "snapshot_id": new_snap_id,
+                    "applied": [], // List touched?
+                    "rejects": [],
+                    "cache_hint": "immutable"
+                }))
+            } else {
+                let stderr = String::from_utf8_lossy(&output.stderr);
+                let rejects = parse_git_apply_errors(&stderr, patch);
+                Ok(serde_json::json!({
+                    "snapshot_id": snap_id, // Return original if failed?
+                    "applied": [],
+                    "rejects": rejects,
+                    "cache_hint": "immutable"
+                }))
+            }
         } else {
             Err(anyhow!("Invalid mode"))
         }
@@ -313,4 +421,99 @@ fn parse_git_apply_errors(stderr: &str, patch: &str) -> Vec<serde_json::Value> {
         }
     }
     rejects
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{BlobBackend, Compression, StorageConfig};
+    use crate::snapshot::lease::LeaseStore;
+    use crate::snapshot::store::Store;
+    use std::sync::Arc;
+
+    #[test]
+    fn test_snapshot_apply_patch() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = WorkspaceTools::new(lease_store, store.clone());
+
+        // Setup base snapshot containing a.txt
+        let t1 = "original content\n";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len()
+        );
+        let sid = "snap-base";
+        store
+            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .unwrap();
+
+        // Patch to modify a.txt and add b.txt
+        let patch = r#"diff --git a/a.txt b/a.txt
+index 7b57bd2..dcd25a4 100644
+--- a/a.txt
++++ b/a.txt
+@@ -1 +1 @@
+-original content
++modified content
+diff --git a/b.txt b/b.txt
+new file mode 100644
+index 0000000..9daeafb
+--- /dev/null
++++ b/b.txt
+@@ -0,0 +1 @@
++test
+"#;
+
+        // Apply patch
+        let res = tools
+            .apply_patch(
+                dir.path(),
+                patch,
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                Some(1), // strip 1 (a/ b/)
+                false,
+                false,
+            )
+            .unwrap();
+
+        let new_sid = res["snapshot_id"].as_str().unwrap();
+        assert_ne!(new_sid, sid);
+
+        // Verify new snapshot content
+        let entries = store.list_snapshot_entries(new_sid).unwrap();
+        assert_eq!(entries.len(), 2); // a.txt, b.txt
+
+        // Check content
+        let mut found_a = false;
+        let mut found_b = false;
+
+        for e in entries {
+            let content = store.get_blob(&e.blob).unwrap().unwrap();
+            let s = String::from_utf8(content).unwrap();
+            if e.path == "a.txt" {
+                assert_eq!(s, "modified content\n");
+                found_a = true;
+            } else if e.path == "b.txt" {
+                assert_eq!(s, "test\n");
+                found_b = true;
+            }
+        }
+        assert!(found_a);
+        assert!(found_b);
+    }
 }
