@@ -553,13 +553,88 @@ impl SnapshotTools {
             // Validate snapshot integrity first
             self.store.validate_snapshot(&sid)?;
 
+            let manifest_entries = self.store.list_snapshot_entries(&sid)?;
+
+            let mut matches: Vec<serde_json::Value> = Vec::new();
+            let mut truncated = false;
+            let mut total_matches = 0;
+
+            // Filter by paths if provided
+            let mut candidate_entries = Vec::new();
+            if let Some(ref p_list) = paths {
+                for entry in manifest_entries {
+                    // Check if entry.path is in p_list or starts with one of them + /
+                    // Simple prefix check isn't enough because "src/foobar" shouldn't match "src/foo".
+                    // Logic: for each p in p_list:
+                    // if p == entry.path OR entry.path.starts_with(p + "/")
+                    let mut keep = false;
+                    for p in p_list {
+                        if entry.path == *p || entry.path.starts_with(&format!("{}/", p)) {
+                            keep = true;
+                            break;
+                        }
+                    }
+                    if keep {
+                        candidate_entries.push(entry);
+                    }
+                }
+            } else {
+                candidate_entries = manifest_entries;
+            }
+
+            // Iterate candidates (already sorted by manifest order)
+            for entry in candidate_entries {
+                if truncated {
+                    break;
+                }
+
+                // Get blob content
+                if let Some(content) = self.store.get_blob(&entry.blob)? {
+                    // Binary check
+                    if content.iter().take(512).any(|&b| b == 0) {
+                        continue;
+                    }
+
+                    // Decode as string
+                    // If valid utf8?
+                    if let Ok(text) = String::from_utf8(content) {
+                        let mut file_lines = Vec::new();
+                        for (i, line) in text.lines().enumerate() {
+                            if re.is_match(line) {
+                                file_lines.push(json!({
+                                    "line": i + 1,
+                                    "col": 1,
+                                    "text": line
+                                }));
+                                total_matches += 1;
+                                if total_matches >= 100 {
+                                    truncated = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if !file_lines.is_empty() {
+                            matches.push(json!({
+                                "path": entry.path,
+                                "lines": file_lines
+                            }));
+                        }
+                    }
+                } else {
+                    // Missing blob? store.get_blob returns None if not found in db/fs.
+                    // validate_snapshot should have caught this, but safeguard:
+                    return Err(anyhow!("Snapshot missing blob: {}", entry.blob));
+                }
+            }
+
             Ok(json!({
-                "snapshot_id": sid, // Should be actual ID
+                "snapshot_id": sid,
                 "query": pattern,
                 "mode": "snapshot",
-                "matches": [],
-                "truncated": false,
-                "cache_key": "stub",
+                "matches": matches,
+                "truncated": truncated,
+                "cache_key": sid, // In snapshot mode, result stable for (sid, pattern)
                 "cache_hint": "immutable"
             }))
         }
@@ -656,5 +731,115 @@ impl SnapshotTools {
            },
            "cache_hint": "until_dirty"
         }))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::config::{BlobBackend, Compression, StorageConfig};
+    use crate::snapshot::lease::LeaseStore;
+
+    #[test]
+    fn test_snapshot_grep_basics() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        // Lease store needed but not used for snapshot-only mode
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Create blobs
+        let t1 = "line one\nline MATCH two\nline three";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+
+        let t2 = "another file\nnothing interesting here";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        // Binary blob
+        let mut b_data = vec![0u8; 10];
+        b_data.extend_from_slice(b"match in binary");
+        let h_bin = store.put_blob(&b_data).unwrap();
+
+        // Create snapshot with ordered paths
+        let manifest_bytes = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a/text1.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b/binary.bin", "blob": "{}", "size": {} }},
+                {{ "path": "c/text2.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h_bin,
+            b_data.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid = "snap-grep";
+        // put_snapshot uses string, need valid path?
+        // put_snapshot arguments are metadata, repo_root doesn't need to exist for put_snapshot storage,
+        // BUT snapshot_grep calls canonicalize(repo_root).
+        // So we must pass `dir.path()` (which exists) to grep.
+        store
+            .put_snapshot(
+                sid,
+                dir.path().to_str().unwrap(),
+                "sha-HEAD",
+                "{}",
+                manifest_bytes.as_bytes(),
+            )
+            .unwrap();
+
+        // 1. Grep all - should find matches in text1, skip binary
+        let res = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                None,
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true, // case insensitive
+            )
+            .unwrap();
+
+        let matches = res["matches"].as_array().unwrap();
+        assert_eq!(matches.len(), 1); // text1 only. binary skipped. text2 no match.
+        assert_eq!(matches[0]["path"], "a/text1.txt");
+        assert_eq!(matches[0]["lines"][0]["text"], "line MATCH two");
+
+        // 2. Grep with path filter
+        let res2 = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                Some(vec!["c".to_string()]),
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true,
+            )
+            .unwrap();
+        assert!(res2["matches"].as_array().unwrap().is_empty()); // c/text2 has no match
+
+        let res3 = tools
+            .snapshot_grep(
+                dir.path(),
+                "match",
+                Some(vec!["a".to_string()]),
+                "snapshot",
+                None,
+                Some(sid.to_string()),
+                true,
+            )
+            .unwrap();
+        assert_eq!(res3["matches"].as_array().unwrap().len(), 1);
     }
 }
