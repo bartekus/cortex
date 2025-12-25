@@ -793,14 +793,58 @@ impl SnapshotTools {
         &self,
         _repo_root: &Path,
         snapshot_id: Option<String>,
+        from_snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
-        // Validate snapshot integrity first
         self.store.validate_snapshot(&snap_id)?;
+
+        let mut changes = Vec::new();
+
+        if let Some(from_sid) = from_snapshot_id {
+            self.store.validate_snapshot(&from_sid)?;
+
+            let target_entries = self.store.list_snapshot_entries(&snap_id)?;
+            let base_entries = self.store.list_snapshot_entries(&from_sid)?;
+
+            // Use maps for easier lookup? list_snapshot_entries returns sorted Vec<Entry>.
+            // Since sorted, we can iterate in parallel or use map. Map is easier.
+            use std::collections::HashMap;
+            let target_map: HashMap<_, _> =
+                target_entries.iter().map(|e| (&e.path, &e.blob)).collect();
+            let base_map: HashMap<_, _> = base_entries.iter().map(|e| (&e.path, &e.blob)).collect();
+
+            // Check for modified and added
+            for (path, blob) in &target_map {
+                match base_map.get(path) {
+                    Some(base_blob) => {
+                        if blob != base_blob {
+                            changes.push(json!({ "path": path, "type": "modified" }));
+                        }
+                    }
+                    None => {
+                        changes.push(json!({ "path": path, "type": "added" }));
+                    }
+                }
+            }
+
+            // Check for deleted
+            for path in base_map.keys() {
+                if !target_map.contains_key(path) {
+                    changes.push(json!({ "path": path, "type": "deleted" }));
+                }
+            }
+        }
+
+        // Sort changes by path for determinism
+        changes.sort_by(|a, b| {
+            let pa = a["path"].as_str().unwrap();
+            let pb = b["path"].as_str().unwrap();
+            pa.cmp(pb)
+        });
 
         Ok(json!({
              "snapshot_id": snap_id,
-             "files_changed": [], // stub
+             "files_changed": changes,
              "cache_hint": "immutable"
         }))
     }
@@ -1204,5 +1248,99 @@ mod tests {
             .snapshot_export(dir.path(), Some(sid.to_string()))
             .unwrap();
         assert_eq!(res["bundle"], res2["bundle"]);
+    }
+
+    #[test]
+    fn test_snapshot_changes() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Base Snapshot
+        let t1 = "base-version";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = "will-delete";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid1 = "snap-base";
+        store
+            .put_snapshot(
+                sid1,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+            )
+            .unwrap();
+
+        // Target Snapshot
+        let t3 = "target-version"; // modified
+        let h3 = store.put_blob(t3.as_bytes()).unwrap();
+        let t4 = "new-file"; // added
+        let h4 = store.put_blob(t4.as_bytes()).unwrap();
+
+        let m2 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "c.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h3,
+            t3.len(),
+            h4,
+            t4.len()
+        );
+
+        let sid2 = "snap-target";
+        store
+            .put_snapshot(
+                sid2,
+                dir.path().to_str().unwrap(),
+                "h2",
+                "{}",
+                m2.as_bytes(),
+            )
+            .unwrap();
+
+        // Check changes
+        let res = tools
+            .snapshot_changes(dir.path(), Some(sid2.to_string()), Some(sid1.to_string()))
+            .unwrap();
+
+        let changes = res["files_changed"].as_array().unwrap();
+        assert_eq!(changes.len(), 3);
+
+        // changes are sorted by path: a.txt, b.txt, c.txt
+        let c0 = &changes[0];
+        assert_eq!(c0["path"], "a.txt");
+        assert_eq!(c0["type"], "modified");
+
+        let c1 = &changes[1];
+        assert_eq!(c1["path"], "b.txt");
+        assert_eq!(c1["type"], "deleted");
+
+        let c2 = &changes[2];
+        assert_eq!(c2["path"], "c.txt");
+        assert_eq!(c2["type"], "added");
     }
 }

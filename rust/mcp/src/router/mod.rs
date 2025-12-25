@@ -207,7 +207,8 @@ impl Router {
                                 "type": "object",
                                 "properties": {
                                     "repo_root": { "type": "string" },
-                                    "snapshot_id": { "type": "string" }
+                                    "snapshot_id": { "type": "string" },
+                                    "from_snapshot_id": { "type": "string" }
                                 },
                                 "required": ["repo_root"]
                             }
@@ -453,10 +454,13 @@ impl Router {
                     "snapshot.changes" => {
                         let repo_root = args.get("repo_root").and_then(|s| s.as_str());
                         let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+                        let from_snapshot_id =
+                            args.get("from_snapshot_id").and_then(|s| s.as_str());
                         if let Some(root) = repo_root {
                             match self.snapshot_tools.snapshot_changes(
                                 std::path::Path::new(root),
                                 snapshot_id.map(|s| s.to_string()),
+                                from_snapshot_id.map(|s| s.to_string()),
                             ) {
                                 Ok(res) => json_rpc_ok(
                                     req.id.clone(),
