@@ -1,6 +1,7 @@
 use crate::snapshot::lease::{Fingerprint, LeaseStore};
 use crate::snapshot::store::{Entry, Manifest, Store};
 use anyhow::{anyhow, Result};
+use base64::Engine;
 use serde_json::json;
 use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
@@ -809,21 +810,57 @@ impl SnapshotTools {
         _repo_root: &Path,
         snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
-        // Export bundle.
-        // For snapshot-only, retrieve snapshot manifest and build bundle.
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
         // Validate snapshot integrity first
         self.store.validate_snapshot(&snap_id)?;
+
+        let entries = self.store.list_snapshot_entries(&snap_id)?;
+        let mut tar_builder = tar::Builder::new(Vec::new());
+
+        // Sort entries by path for deterministic order (list_snapshot_entries already sorts, but verify?)
+        // Store implementation ensures sort.
+
+        let mut included_files = 0;
+        let mut total_bytes = 0;
+
+        for entry in entries {
+            if let Some(content) = self.store.get_blob(&entry.blob)? {
+                let mut header = tar::Header::new_gnu();
+                header.set_size(content.len() as u64);
+                header.set_mode(0o644); // Regular file
+                header.set_mtime(0); // Epoch for determinism
+                header.set_uid(0);
+                header.set_gid(0);
+                header.set_cksum();
+
+                // Use entry.path as path in tar
+                // Ensure no leading slash for tar safety?
+                // entry.path is relative "a/b/c.txt".
+                tar_builder.append_data(&mut header, &entry.path, &content[..])?;
+
+                included_files += 1;
+                total_bytes += content.len();
+            } else {
+                return Err(anyhow!("Missing blob for {}", entry.path));
+            }
+        }
+
+        // Include manifest.json?
+        // Maybe useful metadata.
+        // Let's stick to just the files for now - user wants the WORKSPACE state exported.
+
+        let tar_bytes = tar_builder.into_inner()?;
+        let encoded_bundle = base64::engine::general_purpose::STANDARD.encode(&tar_bytes);
 
         Ok(json!({
             "snapshot_id": snap_id,
             "format": "tar",
             "summary": {
-                "included_files": 0,
-                "included_diffs": 0,
+                "included_files": included_files,
+                "included_bytes": total_bytes,
                 "truncated": false
             },
-            "bundle": "base64:...",
+            "bundle": format!("base64:{}", encoded_bundle),
             "cache_key": snap_id,
             "cache_hint": "immutable"
         }))
@@ -1083,5 +1120,89 @@ mod tests {
         assert!(diff.contains("--- /dev/null"));
         assert!(diff.contains("+++ b/c.txt"));
         assert!(diff.contains("+new file"));
+    }
+
+    #[test]
+    fn test_snapshot_export() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Create content
+        let t1 = "export me";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = vec![0xDE, 0xAD, 0xBE, 0xEF];
+        let h2 = store.put_blob(&t2).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b/data.bin", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid = "snap-export";
+        store
+            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .unwrap();
+
+        // Export
+        let res = tools
+            .snapshot_export(dir.path(), Some(sid.to_string()))
+            .unwrap();
+        let bundle_b64 = res["bundle"]
+            .as_str()
+            .unwrap()
+            .strip_prefix("base64:")
+            .unwrap();
+        let tar_bytes = base64::engine::general_purpose::STANDARD
+            .decode(bundle_b64)
+            .unwrap();
+
+        // Verify tar content
+        let mut archive = tar::Archive::new(&tar_bytes[..]);
+        let mut found_a = false;
+        let mut found_b = false;
+
+        for file in archive.entries().unwrap() {
+            let mut file = file.unwrap();
+            let path = file.path().unwrap().into_owned();
+
+            if path.to_str().unwrap() == "a.txt" {
+                found_a = true;
+                let mut s = String::new();
+                use std::io::Read;
+                file.read_to_string(&mut s).unwrap();
+                assert_eq!(s, "export me");
+                assert_eq!(file.header().mtime().unwrap(), 0); // Determinism check
+            } else if path.to_str().unwrap() == "b/data.bin" {
+                found_b = true;
+                let mut v = Vec::new();
+                use std::io::Read;
+                file.read_to_end(&mut v).unwrap();
+                assert_eq!(v, vec![0xDE, 0xAD, 0xBE, 0xEF]);
+            }
+        }
+
+        assert!(found_a);
+        assert!(found_b);
+
+        // Determinism Check
+        let res2 = tools
+            .snapshot_export(dir.path(), Some(sid.to_string()))
+            .unwrap();
+        assert_eq!(res["bundle"], res2["bundle"]);
     }
 }
