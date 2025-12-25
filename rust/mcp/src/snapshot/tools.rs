@@ -189,6 +189,10 @@ impl SnapshotTools {
             // Snapshot mode
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
+            
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&snap_id)?;
+
             let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
 
             // Filter by prefix/path?
@@ -205,6 +209,9 @@ impl SnapshotTools {
             let mut dirs_seen = std::collections::HashSet::new();
 
             for entry in manifest_entries {
+                // Ensure path is valid (should be covered by validate_snapshot but good to be safe)
+                // Store::validate_path(&entry.path)?; 
+
                 if path.is_empty() || entry.path.starts_with(path) {
                     let relative = if path.is_empty() {
                         entry.path.clone()
@@ -300,6 +307,9 @@ impl SnapshotTools {
 
         let mut entries = Vec::new();
         for path_str in files_to_capture {
+            // Validate path format
+            Store::validate_path(&path_str)?;
+
             let p = self.resolve_path(&repo_root, &path_str)?;
             if p.is_file() {
                 let content = std::fs::read(&p)?;
@@ -389,7 +399,10 @@ impl SnapshotTools {
         } else if mode == "snapshot" {
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
-            // retrieve manifest
+            
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&snap_id)?;
+
             // retrieve manifest
             let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
 
@@ -536,9 +549,12 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else {
-            let _sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            // Validate snapshot integrity first
+            self.store.validate_snapshot(&sid)?;
+            
             Ok(json!({
-                "snapshot_id": _sid, // Should be actual ID
+                "snapshot_id": sid, // Should be actual ID
                 "query": pattern,
                 "mode": "snapshot",
                 "matches": [],
@@ -595,6 +611,9 @@ impl SnapshotTools {
         snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+        // Validate snapshot integrity first
+        self.store.validate_snapshot(&snap_id)?;
+
         Ok(json!({
              "snapshot_id": snap_id,
              "files_changed": [], // stub
@@ -610,6 +629,8 @@ impl SnapshotTools {
         // Export bundle.
         // For snapshot-only, retrieve snapshot manifest and build bundle.
         let snap_id = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+        // Validate snapshot integrity first
+        self.store.validate_snapshot(&snap_id)?;
 
         Ok(json!({
             "snapshot_id": snap_id,
