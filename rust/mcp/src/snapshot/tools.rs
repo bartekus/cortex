@@ -1,5 +1,5 @@
 use crate::snapshot::lease::{Fingerprint, LeaseStore};
-use crate::snapshot::store::{BlobStore, Entry, Manifest};
+use crate::snapshot::store::{Entry, Manifest, Store};
 use anyhow::{anyhow, Result};
 use serde_json::json;
 use sha2::{Digest, Sha256};
@@ -13,15 +13,12 @@ use walkdir;
 
 pub struct SnapshotTools {
     lease_store: Arc<LeaseStore>,
-    blob_store: Arc<BlobStore>,
+    store: Arc<Store>,
 }
 
 impl SnapshotTools {
-    pub fn new(lease_store: Arc<LeaseStore>, blob_store: Arc<BlobStore>) -> Self {
-        Self {
-            lease_store,
-            blob_store,
-        }
+    pub fn new(lease_store: Arc<LeaseStore>, store: Arc<Store>) -> Self {
+        Self { lease_store, store }
     }
 
     // --- Helpers ---
@@ -80,7 +77,7 @@ impl SnapshotTools {
         path: &str,
         mode: &str,
         lease_id: Option<String>,
-        _snapshot_id: Option<String>, // For snapshot mode? Not used yet?
+        snapshot_id: Option<String>, // For snapshot mode? Not used yet?
     ) -> Result<serde_json::Value> {
         let repo_root = repo_root.canonicalize()?;
         let target_path = self.resolve_path(&repo_root, path)?;
@@ -177,7 +174,8 @@ impl SnapshotTools {
                 // Actually, if we haven't created a snapshot, we don't have an ID.
                 // Maybe I should fix schema or use a dummy?
                 // I'll use a dummy valid SHA for now to pass schema.
-                "snapshot_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                // Use fingerprint as stable worktree ID (for UI mostly)
+                "snapshot_id": format!("sha256:{}", fp.status_hash),
                 "path": path,
                 "mode": "worktree",
                 "entries": entries,
@@ -188,15 +186,80 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {
-            // Snapshot mode: Read from BlobStore/Manifest?
-            // "Only lists captured paths".
-            // We need `snapshot_id` input to retrieve manifest? Both `lease_id` and `snapshot_id` are optional in inputs?
-            // If `snapshot_id` is missing in request, we can't look it up.
-            // But `snapshot.list` arguments usually include `snapshot_id` if mode=snapshot.
-            // I'll assume `snapshot_id` is passed.
-            Err(anyhow!(
-                "Snapshot mode list not fully implemented without persistence"
-            ))
+            // Snapshot mode
+            let snap_id =
+                snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
+            let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
+
+            // Filter by prefix/path?
+            // "Only lists captured paths ... Implicit parents".
+            // If path is "", list all entries? Or just top level?
+            // Usually user expects hierarchy.
+            // If path provided, list children?
+            // The entries are flattened.
+
+            // 1. Filter entries starting with path
+            // 2. Determine immediate children
+
+            let mut result_entries = Vec::new();
+            let mut dirs_seen = std::collections::HashSet::new();
+
+            for entry in manifest_entries {
+                if path.is_empty() || entry.path.starts_with(path) {
+                    let relative = if path.is_empty() {
+                        entry.path.clone()
+                    } else {
+                        if entry.path == path {
+                            continue; // Use file() to get the file itself?
+                        }
+                        if !entry.path.starts_with(&format!("{}/", path)) {
+                            // Sibling or partial match, ignore
+                            continue;
+                        }
+                        entry
+                            .path
+                            .strip_prefix(&format!("{}/", path))
+                            .unwrap_or(&entry.path)
+                            .to_string()
+                    };
+
+                    // If relative contains '/', it's a deep file.
+                    // We only want immediate children.
+                    if let Some((dir, _)) = relative.split_once('/') {
+                        if dirs_seen.insert(dir.to_string()) {
+                            result_entries.push(json!({
+                                 "path": if path.is_empty() { dir.to_string() } else { format!("{}/{}", path, dir) },
+                                 "type": "dir"
+                             }));
+                        }
+                    } else {
+                        // It's a file
+                        result_entries.push(json!({
+                            "path": entry.path,
+                            "type": "file",
+                            "size": entry.size,
+                            "sha": entry.blob
+                        }));
+                    }
+                }
+            }
+
+            // Sort
+            result_entries.sort_by(|a, b| {
+                let pa = a.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                let pb = b.get("path").and_then(|v| v.as_str()).unwrap_or("");
+                pa.cmp(pb)
+            });
+
+            Ok(json!({
+                "snapshot_id": snap_id,
+                "path": path,
+                "mode": "snapshot",
+                "entries": result_entries,
+                "truncated": false,
+                "cache_key": snap_id,
+                "cache_hint": "immutable"
+            }))
         } else {
             Err(anyhow!("Invalid mode"))
         }
@@ -240,10 +303,11 @@ impl SnapshotTools {
             let p = self.resolve_path(&repo_root, &path_str)?;
             if p.is_file() {
                 let content = std::fs::read(&p)?;
-                let blob_hash = self.blob_store.put(&content);
+                let blob_hash = self.store.put_blob(&content)?;
                 entries.push(Entry {
                     path: path_str,
                     blob: blob_hash,
+                    size: content.len() as u64,
                 });
             }
         }
@@ -255,8 +319,13 @@ impl SnapshotTools {
 
         // Store manifest
         let manifest_bytes = manifest.to_canonical_json()?.into_bytes();
-        self.blob_store
-            .put_snapshot(snap_id.clone(), manifest_bytes);
+        self.store.put_snapshot(
+            &snap_id,
+            &repo_root.to_string_lossy(),
+            &fp.head_oid,
+            &fp_json,
+            &manifest_bytes,
+        )?;
 
         Ok(json!({
             "snapshot_id": snap_id,
@@ -305,7 +374,7 @@ impl SnapshotTools {
             };
 
             Ok(json!({
-                "snapshot_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+                "snapshot_id": format!("sha256:{}", fp.status_hash),
                 "path": path,
                 "mode": "worktree",
                 "content": format!("base64:{}", encoded),
@@ -321,24 +390,19 @@ impl SnapshotTools {
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
             // retrieve manifest
-            let manifest_bytes = self
-                .blob_store
-                .get_snapshot(&snap_id)
-                .ok_or_else(|| anyhow!("Snapshot not found: {}", snap_id))?;
-
-            let manifest: Manifest = serde_json::from_slice(&manifest_bytes)?;
+            // retrieve manifest
+            let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
 
             // find entry
-            let entry = manifest
-                .entries
+            let entry = manifest_entries
                 .iter()
                 .find(|e| e.path == path)
                 .ok_or_else(|| anyhow!("File not found in snapshot: {}", path))?;
 
             let content = self
-                .blob_store
-                .get(&entry.blob)
-                .ok_or_else(|| anyhow!("Blob missing: {}", entry.blob))?;
+                .store
+                .get_blob(&entry.blob)?
+                .ok_or_else(|| anyhow!("Snapshot corrupted: referenced blob {} not found in store", entry.blob))?;
 
             use base64::{engine::general_purpose, Engine as _};
             let encoded = general_purpose::STANDARD.encode(&content);
@@ -459,7 +523,7 @@ impl SnapshotTools {
             let fp = self.lease_store.get_fingerprint(&lid).unwrap();
 
             Ok(json!({
-                "snapshot_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000", // Stub for worktree
+                "snapshot_id": format!("sha256:{}", fp.status_hash), // Stable worktree ID
                 "query": pattern,
                 "mode": "worktree",
                 "matches": matches,
@@ -567,18 +631,7 @@ impl SnapshotTools {
                "files": 0,
                "bytes": 0
            },
-           "cache_hint": "immutable" // Warning: fingerprint depends on repo state!
-           // If snapshot.info is "Info about REPO", then it's not immutable?
-           // The Spec says `snapshot.info`: returns fingerprint.
-           // Schema said `snapshot-only` tool.
-           // `snapshot.info` on a repo changes as repo changes.
-           // `cache_hint: "immutable"` implies result never changes for same inputs.
-           // Inputs are `repo_root`.
-           // So for a given path, it is NOT immutable.
-           // This means `snapshot.info` SHOULD BE a hybrid tool or have `until_dirty`.
-           // But my lint rules and schema forced `immutable`.
-           // I will put `immutable` to pass schema/lint, but conceptually this is a drift.
-           // Or maybe `snapshot.info` takes a snapshot ID?
+           "cache_hint": "until_dirty"
         }))
     }
 }

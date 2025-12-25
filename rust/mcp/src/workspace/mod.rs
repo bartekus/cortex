@@ -1,6 +1,6 @@
 use crate::snapshot::lease::Fingerprint;
 use crate::snapshot::lease::LeaseStore;
-use crate::snapshot::store::BlobStore;
+use crate::snapshot::store::Store;
 use anyhow::{anyhow, Context, Result};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -10,15 +10,12 @@ use std::sync::Arc;
 
 pub struct WorkspaceTools {
     pub lease_store: Arc<LeaseStore>,
-    pub blob_store: Arc<BlobStore>,
+    pub store: Arc<Store>, // Unused mostly but keeps symmetry
 }
 
 impl WorkspaceTools {
-    pub fn new(lease_store: Arc<LeaseStore>, blob_store: Arc<BlobStore>) -> Self {
-        Self {
-            lease_store,
-            blob_store,
-        }
+    pub fn new(lease_store: Arc<LeaseStore>, store: Arc<Store>) -> Self {
+        Self { lease_store, store }
     }
 
     // Safety helper: ensure path is inside repo root and is safe

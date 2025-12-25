@@ -30,18 +30,21 @@ fn main() -> Result<()> {
     let resolver = Arc::new(ResolveEngine::new(fs, dirs));
 
     // 2. Setup Stores & Tools
-    // In-memory stores shared across requests
-    let blob_store = Arc::new(cortex_mcp::snapshot::store::BlobStore::new());
+    // Persistent store
+    let config = cortex_mcp::config::StorageConfig::default();
+    let store = Arc::new(cortex_mcp::snapshot::store::Store::new(config)?);
+
+    // LeaseStore (currently in-memory, Option A)
     let lease_store = Arc::new(cortex_mcp::snapshot::lease::LeaseStore::new());
 
     let snapshot_tools = Arc::new(cortex_mcp::snapshot::tools::SnapshotTools::new(
         lease_store.clone(),
-        blob_store.clone(),
+        store.clone(),
     ));
 
     let workspace_tools = Arc::new(cortex_mcp::workspace::WorkspaceTools::new(
         lease_store.clone(),
-        blob_store.clone(),
+        store.clone(),
     ));
 
     // 3. Setup MountRegistry
