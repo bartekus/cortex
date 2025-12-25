@@ -2,7 +2,7 @@ use cortex_mcp::io::fs::RealFs;
 use cortex_mcp::resolver::order::ResolveEngine;
 use cortex_mcp::router::mounts::MountRegistry;
 use cortex_mcp::router::{JsonRpcRequest, Router};
-use cortex_mcp::snapshot::{lease::LeaseStore, store::BlobStore, tools::SnapshotTools};
+use cortex_mcp::snapshot::{lease::LeaseStore, tools::SnapshotTools};
 use cortex_mcp::workspace::WorkspaceTools;
 use serde_json::json;
 use std::path::PathBuf;
@@ -17,11 +17,17 @@ fn test_mcp_tools_list() {
     let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
 
-    let blob_store = Arc::new(BlobStore::new());
+    let dir = tempfile::tempdir().unwrap();
+    let config = cortex_mcp::config::StorageConfig {
+        data_dir: dir.path().to_path_buf(),
+        blob_backend: cortex_mcp::config::BlobBackend::Fs,
+        compression: cortex_mcp::config::Compression::None,
+    };
+    let store = Arc::new(cortex_mcp::snapshot::store::Store::new(config).unwrap());
     let lease_store = Arc::new(LeaseStore::new());
 
-    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), blob_store.clone()));
-    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), blob_store.clone()));
+    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), store.clone()));
+    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), store.clone()));
 
     let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
@@ -52,11 +58,17 @@ fn test_mcp_tools_call_validation() {
     let resolver = Arc::new(ResolveEngine::new(fs, Vec::<PathBuf>::new()));
     let mounts = MountRegistry::new();
 
-    let blob_store = Arc::new(BlobStore::new());
+    let dir = tempfile::tempdir().unwrap();
+    let config = cortex_mcp::config::StorageConfig {
+        data_dir: dir.path().to_path_buf(),
+        blob_backend: cortex_mcp::config::BlobBackend::Fs,
+        compression: cortex_mcp::config::Compression::None,
+    };
+    let store = Arc::new(cortex_mcp::snapshot::store::Store::new(config).unwrap());
     let lease_store = Arc::new(LeaseStore::new());
 
-    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), blob_store.clone()));
-    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), blob_store.clone()));
+    let snapshot_tools = Arc::new(SnapshotTools::new(lease_store.clone(), store.clone()));
+    let workspace_tools = Arc::new(WorkspaceTools::new(lease_store.clone(), store.clone()));
 
     let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
