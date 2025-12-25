@@ -473,6 +473,9 @@ impl Router {
                         let path = args.get("path").and_then(|s| s.as_str());
                         let mode = args.get("mode").and_then(|s| s.as_str());
                         let lease_id = args.get("lease_id").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+                        let from_snapshot_id =
+                            args.get("from_snapshot_id").and_then(|s| s.as_str());
 
                         if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
                             match self.snapshot_tools.snapshot_diff(
@@ -480,6 +483,8 @@ impl Router {
                                 p,
                                 m,
                                 lease_id.map(|s| s.to_string()),
+                                snapshot_id.map(|s| s.to_string()),
+                                from_snapshot_id.map(|s| s.to_string()),
                             ) {
                                 Ok(res) => json_rpc_ok(
                                     req.id.clone(),

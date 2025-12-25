@@ -646,6 +646,8 @@ impl SnapshotTools {
         path: &str,
         mode: &str,
         lease_id: Option<String>,
+        snapshot_id: Option<String>,
+        from_snapshot_id: Option<String>,
     ) -> Result<serde_json::Value> {
         let repo_root = repo_root.canonicalize()?;
 
@@ -656,9 +658,6 @@ impl SnapshotTools {
             // `git diff -- path`
             // touches target
             self.lease_store.touch_files(&lid, vec![path.to_string()]);
-
-            // Comparison to empty handled?
-            // "if path.is_empty()"
 
             // run git diff
             let output = Command::new("git")
@@ -676,8 +675,117 @@ impl SnapshotTools {
                 "cache_key": format!("{}:diff:{}", lid, fp.status_hash),
                 "cache_hint": "until_dirty"
             }))
+        } else if mode == "snapshot" {
+            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            self.store.validate_snapshot(&sid)?;
+
+            // Get content from target snapshot
+            let mut target_content = String::new();
+            let mut target_found = false;
+
+            // Find entry in snapshot
+            if let Ok(entries) = self.store.list_snapshot_entries(&sid) {
+                if let Some(entry) = entries.iter().find(|e| e.path == path) {
+                    if let Some(blob) = self.store.get_blob(&entry.blob)? {
+                        // Try decode utf8, if binary?
+                        // similar can diff bytes but usually we diff text.
+                        // If binary, return empty or "Binary files differ"?
+                        if blob.iter().take(512).any(|&b| b == 0) {
+                            return Ok(json!({
+                                "diff": format!("Binary files a/{} and b/{} differ", path, path),
+                                "snapshot_id": sid,
+                                "cache_hint": "immutable"
+                            }));
+                        }
+                        target_content = String::from_utf8_lossy(&blob).to_string();
+                        target_found = true;
+                    }
+                }
+            }
+
+            // Get content from base snapshot (if provided)
+            let mut base_content = String::new();
+            let mut base_found = false;
+
+            if let Some(from_sid) = from_snapshot_id {
+                self.store.validate_snapshot(&from_sid)?;
+                if let Ok(entries) = self.store.list_snapshot_entries(&from_sid) {
+                    if let Some(entry) = entries.iter().find(|e| e.path == path) {
+                        if let Some(blob) = self.store.get_blob(&entry.blob)? {
+                            if blob.iter().take(512).any(|&b| b == 0) {
+                                // Base is binary.
+                                // If target also binary, handled above?
+                                // If target text, base binary -> "Binary files differ"?
+                                return Ok(json!({
+                                    "diff": format!("Binary files a/{} and b/{} differ", path, path),
+                                    "snapshot_id": sid,
+                                    "cache_hint": "immutable"
+                                }));
+                            }
+                            base_content = String::from_utf8_lossy(&blob).to_string();
+                            base_found = true;
+                        }
+                    }
+                }
+            }
+
+            // If neither found, empty diff (or error?)
+            if !target_found && !base_found {
+                return Err(anyhow!("Path not found in either snapshot: {}", path));
+            }
+
+            // Compute diff
+            use similar::{ChangeTag, TextDiff};
+
+            let diff = TextDiff::from_lines(&base_content, &target_content);
+            let mut diff_str = String::new();
+
+            // Imitate git unified diff header
+            // "diff --git a/path b/path"
+            // "index ..."
+            // "--- a/path"
+            // "+++ b/path"
+
+            // Only if different
+            if base_content != target_content {
+                diff_str.push_str(&format!("diff --git a/{} b/{}\n", path, path));
+                // index? stub
+                if !base_found {
+                    diff_str.push_str(&format!(
+                        "new file mode 100644\n--- /dev/null\n+++ b/{}\n",
+                        path
+                    ));
+                } else if !target_found {
+                    diff_str.push_str(&format!(
+                        "deleted file mode 100644\n--- a/{}\n+++ /dev/null\n",
+                        path
+                    ));
+                } else {
+                    diff_str.push_str(&format!("--- a/{}\n+++ b/{}\n", path, path));
+                }
+
+                for group in diff.grouped_ops(3) {
+                    for op in group {
+                        for change in diff.iter_changes(&op) {
+                            let sign = match change.tag() {
+                                ChangeTag::Delete => "-",
+                                ChangeTag::Insert => "+",
+                                ChangeTag::Equal => " ",
+                            };
+                            diff_str.push_str(&format!("{}{}", sign, change));
+                        }
+                    }
+                }
+            }
+
+            Ok(json!({
+                "diff": diff_str,
+                "snapshot_id": sid,
+                "cache_key": sid,
+                "cache_hint": "immutable"
+            }))
         } else {
-            Err(anyhow!("Snapshot mode diff not implemented"))
+            Err(anyhow!("Invalid mode"))
         }
     }
     pub fn snapshot_changes(
@@ -841,5 +949,139 @@ mod tests {
             )
             .unwrap();
         assert_eq!(res3["matches"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn test_snapshot_diff() {
+        let dir = tempfile::tempdir().unwrap();
+        let config = StorageConfig {
+            data_dir: dir.path().to_path_buf(),
+            blob_backend: BlobBackend::Fs,
+            compression: Compression::None,
+        };
+        let store = Arc::new(Store::new(config).unwrap());
+        let lease_store = Arc::new(LeaseStore::new());
+        let tools = SnapshotTools::new(lease_store, store.clone());
+
+        // Snapshot 1 (Base)
+        // a.txt: "version1"
+        // b.txt: "deleted later"
+        let t1 = "version1\n";
+        let h1 = store.put_blob(t1.as_bytes()).unwrap();
+        let t2 = "deleted later\n";
+        let h2 = store.put_blob(t2.as_bytes()).unwrap();
+
+        let m1 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "b.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h1,
+            t1.len(),
+            h2,
+            t2.len()
+        );
+
+        let sid1 = "snap1";
+        store
+            .put_snapshot(
+                sid1,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+            )
+            .unwrap();
+
+        // Snapshot 2 (Target)
+        // a.txt: "version2"
+        // c.txt: "new file"
+        // b.txt missing (deleted)
+        let t3 = "version2\n";
+        let h3 = store.put_blob(t3.as_bytes()).unwrap();
+        let t4 = "new file\n";
+        let h4 = store.put_blob(t4.as_bytes()).unwrap();
+
+        let m2 = format!(
+            r#"{{
+            "entries": [
+                {{ "path": "a.txt", "blob": "{}", "size": {} }},
+                {{ "path": "c.txt", "blob": "{}", "size": {} }}
+            ]
+        }}"#,
+            h3,
+            t3.len(),
+            h4,
+            t4.len()
+        );
+
+        let sid2 = "snap2";
+        store
+            .put_snapshot(
+                sid2,
+                dir.path().to_str().unwrap(),
+                "h2",
+                "{}",
+                m2.as_bytes(),
+            )
+            .unwrap();
+
+        // 1. Diff a.txt (Modified)
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "a.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff a.txt:\n{}", diff);
+        assert!(diff.contains("--- a/a.txt"));
+        assert!(diff.contains("+++ b/a.txt"));
+        assert!(diff.contains("-version1"));
+        assert!(diff.contains("+version2"));
+
+        // 2. Diff b.txt (Deleted in snap2)
+        // Note: snapshot_diff iterates both snapshots to find blobs.
+        // If file not in target but in base -> deleted.
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "b.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff b.txt:\n{}", diff);
+        assert!(diff.contains("deleted file"));
+        assert!(diff.contains("--- a/b.txt"));
+        assert!(diff.contains("+++ /dev/null"));
+        assert!(diff.contains("-deleted later"));
+
+        // 3. Diff c.txt (New in snap2)
+        let res = tools
+            .snapshot_diff(
+                dir.path(),
+                "c.txt",
+                "snapshot",
+                None,
+                Some(sid2.to_string()),
+                Some(sid1.to_string()),
+            )
+            .unwrap();
+        let diff = res["diff"].as_str().unwrap();
+        println!("Diff c.txt:\n{}", diff);
+        assert!(diff.contains("new file"));
+        assert!(diff.contains("--- /dev/null"));
+        assert!(diff.contains("+++ b/c.txt"));
+        assert!(diff.contains("+new file"));
     }
 }
