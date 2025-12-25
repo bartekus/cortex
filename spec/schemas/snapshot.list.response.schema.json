@@ -1,0 +1,130 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.list.response.schema.json",
+    "oneOf": [
+        {
+            "title": "snapshot.list worktree success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "path",
+                "mode",
+                "entries",
+                "truncated",
+                "lease_id",
+                "fingerprint",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "path": {
+                    "$ref": "./common.schema.json#/$defs/path"
+                },
+                "mode": {
+                    "type": "string",
+                    "const": "worktree"
+                },
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/entry"
+                    }
+                },
+                "truncated": {
+                    "type": "boolean"
+                },
+                "lease_id": {
+                    "$ref": "./common.schema.json#/$defs/lease_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "until_dirty"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "title": "snapshot.list snapshot success",
+            "type": "object",
+            "required": [
+                "snapshot_id",
+                "path",
+                "mode",
+                "entries",
+                "truncated",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "path": {
+                    "$ref": "./common.schema.json#/$defs/path"
+                },
+                "mode": {
+                    "type": "string",
+                    "const": "snapshot"
+                },
+                "entries": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/entry"
+                    }
+                },
+                "truncated": {
+                    "type": "boolean"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ],
+    "$defs": {
+        "entry": {
+            "type": "object",
+            "required": [
+                "path",
+                "type"
+            ],
+            "properties": {
+                "path": {
+                    "$ref": "./common.schema.json#/$defs/path"
+                },
+                "type": {
+                    "type": "string",
+                    "enum": [
+                        "file",
+                        "dir"
+                    ]
+                },
+                "size": {
+                    "type": "integer",
+                    "minimum": 0
+                },
+                "sha": {
+                    "$ref": "./common.schema.json#/$defs/sha"
+                }
+            },
+            "additionalProperties": false
+        }
+    }
+}

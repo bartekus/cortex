@@ -1,0 +1,43 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/workspace.apply_patch.request.schema.json",
+    "type": "object",
+    "required": [
+        "repo_root",
+        "patch",
+        "strip",
+        "reject_on_conflict",
+        "mode",
+        "dry_run"
+    ],
+    "properties": {
+        "repo_root": {
+            "$ref": "./common.schema.json#/$defs/repo_root"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "snapshot_id": {
+            "$ref": "./common.schema.json#/$defs/snapshot_id"
+        },
+        "patch": {
+            "type": "string",
+            "minLength": 1
+        },
+        "strip": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 32
+        },
+        "reject_on_conflict": {
+            "type": "boolean"
+        },
+        "mode": {
+            "$ref": "./common.schema.json#/$defs/mode"
+        },
+        "dry_run": {
+            "type": "boolean"
+        }
+    },
+    "additionalProperties": false
+}

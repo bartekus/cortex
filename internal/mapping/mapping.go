@@ -173,9 +173,9 @@ func Analyze(opts Options) (Report, error) {
 
 	// Convert to internal featureMeta format
 	metas := make([]featureMeta, 0, len(featuresMap))
-	for id, fs := range featuresMap {
+	for id, fspec := range featuresMap {
 		// Convert absolute spec path back to relative for consistency
-		specPath := fs.Spec
+		specPath := fspec.Spec
 		if filepath.IsAbs(specPath) {
 			rel, err := filepath.Rel(root, specPath)
 			if err == nil {
@@ -184,7 +184,7 @@ func Analyze(opts Options) (Report, error) {
 		}
 		metas = append(metas, featureMeta{
 			ID:             id,
-			Implementation: string(fs.Status),
+			Implementation: string(fspec.Status),
 			SpecPath:       specPath,
 		})
 	}
@@ -260,28 +260,18 @@ func analyzeWithFeatures(root string, metas []featureMeta) (Report, error) {
 		// Supported:
 		//   - Go: .go
 		//   - Rust: .rs
+		//   - TypeScript/JavaScript: .ts, .tsx, .js, .jsx
 		//   - YAML: .yml, .yaml
 		//   - Makefile: Makefile (no extension)
 		baseName := filepath.Base(rel)
 		ext := strings.ToLower(filepath.Ext(rel))
 		isMakefile := baseName == "Makefile"
-		isSupported := ext == ".go" || ext == ".rs" || ext == ".yml" || ext == ".yaml" || isMakefile
+		isTSJS := ext == ".ts" || ext == ".tsx" || ext == ".js" || ext == ".jsx"
+		isSupported := ext == ".go" || ext == ".rs" || isTSJS || ext == ".yml" || ext == ".yaml" || isMakefile
 		if !isSupported {
 			return nil
 		}
 
-		// Identify test files.
-		//
-		// Go conventions:
-		//   - *_test.go
-		//   - test_*.go
-		//
-		// Rust conventions (integration tests):
-		//   - */tests/*.rs
-		//   - *_test.rs
-		//   - test_*.rs
-		//
-		// Golden fixtures are treated as tests even if the filename does not include "test".
 		base := strings.ToLower(filepath.Base(rel))
 		norm := pathClean(rel)
 		isTestFile := false
@@ -290,15 +280,25 @@ func analyzeWithFeatures(root string, metas []featureMeta) (Report, error) {
 			isTestFile = strings.HasSuffix(base, "_test.go") || strings.HasPrefix(base, "test_")
 		case ".rs":
 			isTestFile = strings.Contains(norm, "/tests/") || strings.HasSuffix(base, "_test.rs") || strings.HasPrefix(base, "test_")
+		case ".ts", ".tsx", ".js", ".jsx":
+			// Common JS/TS test conventions:
+			//   - *.test.* / *.spec.*
+			//   - *_test.* / test_*.* (Go/Rust-like naming some repos use)
+			//   - __tests__ directory
+			//   - /tests/ directory (repo-level or package-level)
+			isTestFile = strings.Contains(norm, "/__tests__/") || strings.Contains(norm, "/tests/") ||
+				strings.HasSuffix(base, ".test"+ext) || strings.HasSuffix(base, ".spec"+ext) ||
+				strings.HasSuffix(base, "_test"+ext) || strings.HasPrefix(base, "test_")
 		default:
 			// YAML/YML and Makefile are treated as implementation/config; never tests.
 			isTestFile = false
 		}
+		// Golden files should count as tests even when not named like tests.
+		// We treat either a "golden" directory segment or a filename containing "golden" as test.
+		// This applies to languages we consider testable sources.
 		if !isTestFile {
-			// Golden files should count as tests even when not named like tests.
-			// We treat either a "golden" directory segment or a filename containing "golden" as test.
-			// This only applies to languages we consider testable sources (.go/.rs).
-			if ext == ".go" || ext == ".rs" {
+			switch ext {
+			case ".go", ".rs", ".ts", ".tsx", ".js", ".jsx":
 				isTestFile = strings.Contains(norm, "/golden/") || strings.Contains(base, "golden")
 			}
 		}

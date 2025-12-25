@@ -33,7 +33,7 @@ func CalculateStats(phases map[string]*Phase) *Stats {
 			ps.Total++
 			stats.Total++
 
-			switch f.Status {
+			switch f.Implementation {
 			case "done":
 				ps.Done++
 				stats.Done++
@@ -79,7 +79,7 @@ func IdentifyBlockers(phases map[string]*Phase) []*Blocker {
 
 	for featureID := range index {
 		f := index[featureID]
-		if f.Status == "done" {
+		if f.Implementation == "done" {
 			continue
 		}
 
@@ -91,7 +91,7 @@ func IdentifyBlockers(phases map[string]*Phase) []*Blocker {
 		for _, depID := range f.DependsOn {
 			dep, ok := index[depID]
 			// If dependency is missing or not done, treat it as blocking.
-			if !ok || dep.Status != "done" {
+			if !ok || dep.Implementation != "done" {
 				blockedBy = append(blockedBy, depID)
 			}
 		}

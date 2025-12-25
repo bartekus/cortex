@@ -4,4 +4,6 @@ pub mod protocol;
 pub mod resolver;
 pub mod router;
 pub mod skills;
+pub mod snapshot;
 pub mod util;
+pub mod workspace;

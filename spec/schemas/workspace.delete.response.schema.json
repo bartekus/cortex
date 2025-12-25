@@ -1,0 +1,22 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/workspace.delete.response.schema.json",
+    "oneOf": [
+        {
+            "title": "workspace.delete success",
+            "type": "object",
+            "required": [
+                "deleted"
+            ],
+            "properties": {
+                "deleted": {
+                    "type": "boolean"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

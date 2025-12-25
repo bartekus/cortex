@@ -154,6 +154,7 @@ features:
     depends_on:
       - CORE_REPO_CONTRACT
 
+  # --- MCP Tools ---
   - id: MCP_TOOLS
     title: "MCP Tools"
     governance: approved
@@ -163,6 +164,26 @@ features:
     group: mcp
     tests: []
     depends_on: [MCP_ROUTER_CONTRACT]
+
+  - id: MCP_SNAPSHOT_WORKSPACE_SUBSTRATE
+    title: "MCP Snapshot & Workspace Substrate"
+    governance: approved
+    implementation: done
+    spec: "spec/mcp/snapshot-workspace-v1.md"
+    owner: bart
+    group: mcp
+    tests: ['tests/harness/run_golden_test.ts']
+    depends_on: [MCP_TOOLS]
+
+  - id: MCP_SCHEMA_LINT_RULES
+    title: "MCP Schema Lint Rules"
+    governance: approved
+    implementation: done
+    spec: "spec/schemas/SCHEMA_LINT_RULES.md"
+    owner: bart
+    group: schemas
+    tests: ['tests/harness/schema_lint_test.ts']
+    depends_on: [MCP_TOOLS]
 
   # --- Skills & Reports ---
   - id: SKILLS_REGISTRY

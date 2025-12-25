@@ -23,12 +23,12 @@ install:
 	@go install github.com/golangci/golangci-lint/cmd/golangci-lint@$(GOLANGCI_LINT_VERSION)
 	@echo "Installing addlicense@$(ADDLICENSE_VERSION)"
 	@go install github.com/google/addlicense@$(ADDLICENSE_VERSION)
+	@echo "installing node dependencies for tests harness"
+	@cd tests && npm install
 
 all: clean fmt-check lint test build context docs reports gov
 
-finalize: build-rust build-go;
-
-
+check: validate-and-build;
 
 clean:
 	@rm -rf .cortex docs/__generated__
@@ -102,7 +102,7 @@ validate-and-build-go: go-fmt-check go-lint go-test go-build
 
 validate-and-build-rust: rust-fmt-check rust-lint rust-test rust-build
 
-test: go-test rust-test
+test: go-test rust-test node-test
 
 lint: go-lint rust-lint
 
@@ -166,8 +166,13 @@ rust-lint:
 
 rust-test:
 	@echo "Testing Rust..."
-	@cd rust && cargo test -p cortex-mcp -p xray
+	@cd rust && cargo test -p cortex-mcp -p xray && cd ../tests && npm test
 
 rust-build:
 	@echo "Building Rust..."
 	@cd rust && cargo build -p cortex-mcp -p xray --release && cp ./target/release/xray ../bin/xray && cp ./target/release/cortex-mcp ../bin/cortex-mcp
+
+# --- NodeJS (tests/ root) ---
+node-test:
+	@echo "Testing Rust..."
+	@cd tests && npm test

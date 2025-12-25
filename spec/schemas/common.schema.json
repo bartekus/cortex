@@ -1,0 +1,161 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/common.schema.json",
+    "title": "Common schema defs for MCP Snapshot/Workspace v1",
+    "type": "object",
+    "$defs": {
+        "snapshot_id": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "lease_id": {
+            "type": "string"
+        },
+        "repo_root": {
+            "type": "string",
+            "minLength": 1
+        },
+        "path": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "^(?!/)(?!.*\\\\)(?!.*\\.{2})(?!.*~)(?!.*\\x00).+$"
+        },
+        "sha": {
+            "type": "string",
+            "minLength": 7
+        },
+        "sha256": {
+            "type": "string",
+            "pattern": "^sha256:[a-f0-9]{64}$"
+        },
+        "base64": {
+            "type": "string",
+            "pattern": "^base64:[A-Za-z0-9+/=\\r\\n]+$"
+        },
+        "fingerprint": {
+            "type": "object",
+            "required": [
+                "head_oid",
+                "index_oid",
+                "status_hash"
+            ],
+            "properties": {
+                "head_oid": {
+                    "type": "string"
+                },
+                "index_oid": {
+                    "type": "string"
+                },
+                "status_hash": {
+                    "$ref": "#/$defs/sha256"
+                }
+            },
+            "additionalProperties": false
+        },
+        "cache_key": {
+            "type": "string",
+            "minLength": 1
+        },
+        "cache_hint": {
+            "type": "string",
+            "enum": [
+                "immutable",
+                "until_dirty"
+            ]
+        },
+        "rename_detection": {
+            "type": "string",
+            "enum": [
+                "off",
+                "on",
+                "aggressive"
+            ]
+        },
+        "ignore_rules": {
+            "type": "string",
+            "enum": [
+                "git",
+                "none"
+            ]
+        },
+        "mode": {
+            "type": "string",
+            "enum": [
+                "worktree",
+                "snapshot"
+            ]
+        },
+        "eol": {
+            "type": "string",
+            "enum": [
+                "lf",
+                "crlf",
+                "mixed"
+            ]
+        },
+        "kind": {
+            "type": "string",
+            "enum": [
+                "text",
+                "binary"
+            ]
+        },
+        "limits": {
+            "type": "object",
+            "properties": {
+                "max_matches": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "max_files": {
+                    "type": "integer",
+                    "minimum": 1
+                },
+                "max_bytes": {
+                    "type": "integer",
+                    "minimum": 1
+                }
+            },
+            "additionalProperties": false
+        },
+        "error": {
+            "type": "object",
+            "required": [
+                "error"
+            ],
+            "properties": {
+                "error": {
+                    "type": "object",
+                    "required": [
+                        "code",
+                        "message"
+                    ],
+                    "properties": {
+                        "code": {
+                            "type": "string",
+                            "enum": [
+                                "NOT_FOUND",
+                                "INVALID_ARGUMENT",
+                                "REPO_CHANGED",
+                                "PERMISSION_DENIED",
+                                "TOO_LARGE",
+                                "INTERNAL",
+                                "STALE_LEASE"
+                            ]
+                        },
+                        "message": {
+                            "type": "string"
+                        },
+                        "details": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        }
+    },
+    "additionalProperties": false
+}

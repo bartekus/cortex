@@ -1,0 +1,139 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/workspace.apply_patch.response.schema.json",
+    "oneOf": [
+        {
+            "title": "workspace.apply_patch worktree success",
+            "type": "object",
+            "required": [
+                "applied",
+                "rejects",
+                "lease_id",
+                "fingerprint",
+                "cache_key",
+                "cache_hint"
+            ],
+            "$defs": {
+                "applied": {
+                    "type": "object",
+                    "required": [
+                        "path",
+                        "status"
+                    ],
+                    "properties": {
+                        "path": {
+                            "$ref": "./common.schema.json#/$defs/path"
+                        },
+                        "status": {
+                            "type": "string",
+                            "enum": [
+                                "ok"
+                            ]
+                        }
+                    },
+                    "additionalProperties": false
+                },
+                "reject": {
+                    "type": "object",
+                    "required": [
+                        "path",
+                        "hunks"
+                    ],
+                    "properties": {
+                        "path": {
+                            "$ref": "./common.schema.json#/$defs/path"
+                        },
+                        "hunks": {
+                            "type": "array",
+                            "items": {
+                                "type": "object",
+                                "required": [
+                                    "index",
+                                    "reason"
+                                ],
+                                "properties": {
+                                    "index": {
+                                        "type": "integer",
+                                        "minimum": 0
+                                    },
+                                    "reason": {
+                                        "type": "string"
+                                    }
+                                },
+                                "additionalProperties": false
+                            }
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "properties": {
+                "applied": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/applied"
+                    }
+                },
+                "rejects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/reject"
+                    }
+                },
+                "lease_id": {
+                    "$ref": "./common.schema.json#/$defs/lease_id"
+                },
+                "fingerprint": {
+                    "$ref": "./common.schema.json#/$defs/fingerprint"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "until_dirty"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "title": "workspace.apply_patch snapshot success",
+            "type": "object",
+            "required": [
+                "applied",
+                "rejects",
+                "snapshot_id",
+                "cache_key",
+                "cache_hint"
+            ],
+            "properties": {
+                "applied": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/applied"
+                    }
+                },
+                "rejects": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/$defs/reject"
+                    }
+                },
+                "snapshot_id": {
+                    "$ref": "./common.schema.json#/$defs/snapshot_id"
+                },
+                "cache_key": {
+                    "$ref": "./common.schema.json#/$defs/cache_key"
+                },
+                "cache_hint": {
+                    "type": "string",
+                    "const": "immutable"
+                }
+            },
+            "additionalProperties": false
+        },
+        {
+            "$ref": "./common.schema.json#/$defs/error"
+        }
+    ]
+}

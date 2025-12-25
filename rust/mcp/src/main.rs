@@ -29,11 +29,26 @@ fn main() -> Result<()> {
     let fs = RealFs;
     let resolver = Arc::new(ResolveEngine::new(fs, dirs));
 
-    // 2. Setup MountRegistry
+    // 2. Setup Stores & Tools
+    // In-memory stores shared across requests
+    let blob_store = Arc::new(cortex_mcp::snapshot::store::BlobStore::new());
+    let lease_store = Arc::new(cortex_mcp::snapshot::lease::LeaseStore::new());
+
+    let snapshot_tools = Arc::new(cortex_mcp::snapshot::tools::SnapshotTools::new(
+        lease_store.clone(),
+        blob_store.clone(),
+    ));
+
+    let workspace_tools = Arc::new(cortex_mcp::workspace::WorkspaceTools::new(
+        lease_store.clone(),
+        blob_store.clone(),
+    ));
+
+    // 3. Setup MountRegistry
     let mounts = cortex_mcp::router::mounts::MountRegistry::new();
 
-    // 3. Setup Router
-    let router = Router::new(resolver, mounts);
+    // 4. Setup Router
+    let router = Router::new(resolver, mounts, snapshot_tools, workspace_tools);
 
     // 4. Stdio Loop (MCP framing)
     let stdin = io::stdin();

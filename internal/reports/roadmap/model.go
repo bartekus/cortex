@@ -19,13 +19,14 @@ package roadmap
 
 // Feature represents a single feature entry from spec/features.yaml.
 type Feature struct {
-	ID        string   `yaml:"id"`
-	Title     string   `yaml:"title"`
-	Status    string   `yaml:"status"`
-	Spec      string   `yaml:"spec"`
-	Owner     string   `yaml:"owner"`
-	DependsOn []string `yaml:"depends_on"`
-	Tests     []string `yaml:"tests"`
+	ID             string   `yaml:"id"`
+	Title          string   `yaml:"title"`
+	Governance     string   `yaml:"governance"`
+	Implementation string   `yaml:"implementation"`
+	Spec           string   `yaml:"spec"`
+	Owner          string   `yaml:"owner"`
+	DependsOn      []string `yaml:"depends_on"`
+	Tests          []string `yaml:"tests"`
 }
 
 // featureDocument matches the top-level shape of spec/features.yaml for YAML decoding.

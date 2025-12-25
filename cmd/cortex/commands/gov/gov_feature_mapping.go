@@ -20,9 +20,9 @@ import (
 	"sort"
 
 	"github.com/bartekus/cortex/cmd/cortex/internal/clierr"
-	"github.com/spf13/cobra"
+	"github.com/bartekus/cortex/internal/mapping"
 
-	"github.com/bartekus/cortex/internal/governance/mapping"
+	"github.com/spf13/cobra"
 )
 
 func NewGovFeatureMappingCommand() *cobra.Command {

@@ -1,0 +1,81 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "spec/schemas/snapshot.export.request.schema.json",
+    "type": "object",
+    "required": [
+        "snapshot_id",
+        "format",
+        "preset",
+        "selection",
+        "mode"
+    ],
+    "properties": {
+        "snapshot_id": {
+            "$ref": "./common.schema.json#/$defs/snapshot_id"
+        },
+        "lease_id": {
+            "$ref": "./common.schema.json#/$defs/lease_id"
+        },
+        "format": {
+            "type": "string",
+            "enum": [
+                "prompt_bundle",
+                "json",
+                "tar"
+            ]
+        },
+        "preset": {
+            "type": "string",
+            "enum": [
+                "task_min",
+                "review_min",
+                "debug_min",
+                "full"
+            ]
+        },
+        "mode": {
+            "$ref": "./common.schema.json#/$defs/mode"
+        },
+        "selection": {
+            "type": "object",
+            "required": [
+                "paths",
+                "include"
+            ],
+            "properties": {
+                "paths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string",
+                        "minLength": 1
+                    }
+                },
+                "include": {
+                    "type": "object",
+                    "required": [
+                        "files",
+                        "diffs",
+                        "changes"
+                    ],
+                    "properties": {
+                        "files": {
+                            "type": "boolean"
+                        },
+                        "diffs": {
+                            "type": "boolean"
+                        },
+                        "changes": {
+                            "type": "boolean"
+                        }
+                    },
+                    "additionalProperties": false
+                }
+            },
+            "additionalProperties": false
+        },
+        "limits": {
+            "$ref": "./common.schema.json#/$defs/limits"
+        }
+    },
+    "additionalProperties": false
+}

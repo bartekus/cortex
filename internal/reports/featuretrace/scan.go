@@ -55,8 +55,17 @@ func walkDir(root string, fn func(path string, info os.FileInfo) error) error {
 		}
 
 		if info.IsDir() {
-			// Skip hidden dirs, .git, and testdata
-			if strings.HasPrefix(name, ".") || name == "testdata" || name == ".git" {
+			// Skip hidden dirs, VCS dirs, and large dependency/output dirs
+			if strings.HasPrefix(name, ".") ||
+				name == ".git" ||
+				name == "testdata" ||
+				name == "node_modules" ||
+				name == "vendor" ||
+				name == "target" ||
+				name == "dist" ||
+				name == "build" ||
+				name == ".cortex" ||
+				name == "bin" {
 				continue
 			}
 			if err := walkDir(fullPath, fn); err != nil {
@@ -146,6 +155,8 @@ func extractFeatureIDFromFile(filePath string) (string, error) {
 	}()
 
 	scanner := bufio.NewScanner(f)
+	// Increase scanner buffer to handle large single-line files (minified assets, sourcemaps, etc).
+	scanner.Buffer(make([]byte, 64*1024), 2*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
 		trimmed := strings.TrimSpace(line)
@@ -180,18 +191,80 @@ func isSpecFile(path string) bool {
 
 // isTestFile determines if a file path represents a test file.
 func isTestFile(path string) bool {
+	p := filepath.ToSlash(path)
 	base := filepath.Base(path)
+	ext := filepath.Ext(base)
+
+	// Treat test dirs as tests (and keep testdata excluded)
+	if strings.Contains(p, "/testdata/") {
+		return true
+	}
+	if strings.Contains(p, "/tests/") {
+		return true
+	}
+
+	// Prefix-based tests: test_*.{go,ts,tsx,rs} and tests_*.{go,ts,tsx,rs}
+	if (strings.HasPrefix(base, "test_") || strings.HasPrefix(base, "tests_")) &&
+		(ext == ".go" || ext == ".ts" || ext == ".tsx" || ext == ".rs") {
+		return true
+	}
+
+	// Suffix-based tests
+	if hasAnySuffix(base,
+		"_test.go",
+		"_test.ts",
+		"_test.tsx",
+		"_test.rs",
+		".test.ts",
+		".test.tsx",
+		".spec.ts",
+		".spec.tsx",
+	) {
+		return true
+	}
+
+	// Keep legacy Go pattern
 	return strings.HasSuffix(base, "_test.go")
 }
 
 // isImplementationFile determines if a file path represents an implementation file.
 func isImplementationFile(path string) bool {
-	if filepath.Ext(path) != ".go" {
+	p := filepath.ToSlash(path)
+	base := filepath.Base(path)
+
+	// Exclude testdata always
+	if strings.Contains(p, "/testdata/") {
 		return false
 	}
+
+	// Exclude tests (covers /tests/, test_ prefix, *_test.*, etc.)
 	if isTestFile(path) {
 		return false
 	}
-	p := filepath.ToSlash(path)
-	return !strings.Contains(p, "/testdata/")
+
+	// Go
+	if filepath.Ext(path) == ".go" {
+		return true
+	}
+
+	// TypeScript / TSX (exclude typings)
+	if hasAnySuffix(base, ".ts", ".tsx") {
+		return !strings.HasSuffix(base, ".d.ts")
+	}
+
+	// Rust
+	if filepath.Ext(path) == ".rs" {
+		return true
+	}
+
+	return false
+}
+
+func hasAnySuffix(s string, suffixes ...string) bool {
+	for _, suf := range suffixes {
+		if strings.HasSuffix(s, suf) {
+			return true
+		}
+	}
+	return false
 }

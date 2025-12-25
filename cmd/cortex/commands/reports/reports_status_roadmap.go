@@ -23,10 +23,11 @@ import (
 	"path/filepath"
 
 	"github.com/bartekus/cortex/cmd/cortex/internal/clierr"
+	roadmap2 "github.com/bartekus/cortex/internal/reports/roadmap"
+
 	"github.com/spf13/cobra"
 
 	"github.com/bartekus/cortex/internal/projectroot"
-	"github.com/bartekus/cortex/internal/roadmap"
 )
 
 const (
@@ -66,7 +67,7 @@ This command is part of CLI_COMMAND_STATUS and is used by governance tooling.`,
 				outputPath = filepath.Join(repoRoot, outputPath)
 			}
 
-			phases, err := roadmap.DetectPhases(featuresPath)
+			phases, err := roadmap2.DetectPhases(featuresPath)
 			if err != nil {
 				// Check if it's a file not found error
 				if os.IsNotExist(err) {
@@ -76,10 +77,10 @@ This command is part of CLI_COMMAND_STATUS and is used by governance tooling.`,
 				return clierr.New(1, fmt.Sprintf("status roadmap: detect phases: %v", err))
 			}
 
-			stats := roadmap.CalculateStats(phases)
-			blockers := roadmap.IdentifyBlockers(phases)
+			stats := roadmap2.CalculateStats(phases)
+			blockers := roadmap2.IdentifyBlockers(phases)
 
-			markdown := roadmap.GenerateMarkdown(stats, blockers)
+			markdown := roadmap2.GenerateMarkdown(stats, blockers)
 
 			// Ensure output directory exists
 			outputDir := filepath.Dir(outputPath)
