@@ -2,6 +2,7 @@ use crate::snapshot::lease::Fingerprint;
 use crate::snapshot::lease::LeaseStore;
 use crate::snapshot::store::Store;
 use anyhow::{anyhow, Context, Result};
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -262,12 +263,19 @@ impl WorkspaceTools {
                 // Use base snapshot's fingerprint to maintain same "context"
                 let new_snap_id = new_manifest.compute_snapshot_id(&base_info.fingerprint_json)?;
 
+                // Compute patch hash for lineage
+                let patch_hash =
+                    format!("sha256:{}", hex::encode(Sha256::digest(patch.as_bytes())));
+
                 self.store.put_snapshot(
                     &new_snap_id,
                     &base_info.repo_root,        // Preserve base repo_root
                     &base_info.head_sha,         // Preserve base head_sha
                     &base_info.fingerprint_json, // Preserve base fingerprint
                     manifest_json.as_bytes(),
+                    Some(&snap_id),    // derived_from
+                    Some(&patch_hash), // applied_patch_hash
+                    None,              // label
                 )?;
 
                 Ok(serde_json::json!({
@@ -449,7 +457,16 @@ mod tests {
         );
         let sid = "snap-base";
         store
-            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .put_snapshot(
+                sid,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+                None,
+                None,
+                None,
+            )
             .unwrap();
 
         // Patch to modify a.txt and add b.txt

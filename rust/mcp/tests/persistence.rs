@@ -34,6 +34,9 @@ fn test_persistence_survives_restart() -> anyhow::Result<()> {
             "sha256:dummy_head",
             r#"{"head_oid":"dummy"}"#,
             &manifest_bytes,
+            None,
+            None,
+            None,
         )?;
         hash
     };
@@ -107,7 +110,16 @@ fn test_invariant_missing_blob_row() -> anyhow::Result<()> {
     }]);
     let manifest_bytes = serde_json::to_vec(&manifest)?;
 
-    let result = store.put_snapshot("snap-ghost", "/tmp", "sha256:head", "{}", &manifest_bytes);
+    let result = store.put_snapshot(
+        "snap-ghost",
+        "/tmp",
+        "sha256:head",
+        "{}",
+        &manifest_bytes,
+        None,
+        None,
+        None,
+    );
 
     assert!(
         result.is_err(),

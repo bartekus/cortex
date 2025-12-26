@@ -45,6 +45,9 @@ fn test_apply_patch_determinism() -> Result<()> {
         head_sha,
         fingerprint,
         manifest_json.as_bytes(),
+        None,
+        None,
+        None,
     )?;
 
     // 2. Define Patch
@@ -96,6 +99,10 @@ index 0000000..1111111 100644
     assert_eq!(info.repo_root, repo_root);
     assert_eq!(info.head_sha, head_sha);
     assert_eq!(info.fingerprint_json, fingerprint); // Should inherit base fingerprint
+
+    // Check lineage
+    assert_eq!(info.derived_from.as_deref(), Some(base_sid));
+    assert!(info.applied_patch_hash.is_some());
 
     // Check content
     // We can't easily check content without listing entries, but determinism is the main goal here.
