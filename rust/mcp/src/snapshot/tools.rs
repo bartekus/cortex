@@ -72,47 +72,46 @@ impl SnapshotTools {
 
     // --- Tools ---
 
+    #[allow(clippy::too_many_arguments)]
     pub fn snapshot_list(
         &self,
         repo_root: &Path,
         path: &str,
         mode: &str,
         lease_id: Option<String>,
-        snapshot_id: Option<String>, // For snapshot mode? Not used yet?
+        snapshot_id: Option<String>,
+        limit: Option<usize>,
+        offset: Option<usize>,
     ) -> Result<serde_json::Value> {
         let repo_root = repo_root.canonicalize()?;
         let target_path = self.resolve_path(&repo_root, path)?;
+
+        let limit = limit.unwrap_or(1000); // Default limit? Or unlimited? Let's say 1000 safety cap.
+        let offset = offset.unwrap_or(0);
 
         if mode == "worktree" {
             let lid = self.check_lease(lease_id.as_deref(), &repo_root)?;
 
             // Walk dir efficiently
             let mut entries = Vec::new();
+            let total;
+
             if target_path.exists() {
                 // If file, just that.
                 if target_path.is_file() {
-                    entries.push(json!({
-                        "path": path,
-                        "type": "file",
-                        // size, sha? "snapshot.list" spec says "returned file entries".
-                        // Schema includes size, sha (opt?).
-                    }));
-                    self.lease_store.touch_files(&lid, vec![path.to_string()]);
+                    // Single file, offset 0?
+                    total = 1;
+
+                    if offset == 0 {
+                        entries.push(json!({
+                            "path": path,
+                            "type": "file",
+                        }));
+                        self.lease_store.touch_files(&lid, vec![path.to_string()]);
+                    }
                 } else {
                     // Dir
-                    // list files one level? "snapshot.list" usually lists content of directory?
-                    // Spec says "Only lists captured paths ... Implicit parents".
-                    // Wait, "snapshot.list" behavior: usually recursive or single level?
-                    // Most MCP `list_dir` are single level.
-                    // If `snapshot.list` lists *captured paths*, implies recursive for snapshot creation?
-                    // But usually user browsing uses it.
-                    // "touched files + implicit parents"
-                    // Let's assume single level for browsing? Or recursive?
-                    // Spec "Implicit parents are listable" -> implies hierarchy navigation.
-                    // We'll assume single level listing of directory contents.
-
-                    // For `worktree` mode, it's a live view.
-                    // We list children.
+                    let mut raw_entries = Vec::new();
                     for entry in std::fs::read_dir(&target_path)? {
                         let entry = entry?;
                         let ftype = entry.file_type()?;
@@ -120,9 +119,6 @@ impl SnapshotTools {
                         let fname_str = fname.to_string_lossy();
 
                         if fname_str.starts_with('.') && fname_str != ".gitignore" {
-                            // Ignore hidden files by convention?
-                            // Spec says "Ignore rules applied deterministically".
-                            // We should probably check .gitignore but for now simple hidden?
                             continue;
                         }
 
@@ -133,54 +129,46 @@ impl SnapshotTools {
                         };
 
                         let type_str = if ftype.is_dir() { "dir" } else { "file" };
-                        entries.push(json!({
-                            "path": rel,
-                            "type": type_str,
-                            // size?
-                        }));
+                        raw_entries.push((rel, type_str.to_string()));
+                    }
 
-                        // Touch child if file?
-                        // "list: Touches returned file entries".
-                        if ftype.is_file() {
-                            self.lease_store.touch_files(&lid, vec![rel]);
+                    // Sort BEFORE paging for determinism
+                    raw_entries.sort_by(|a, b| a.0.cmp(&b.0));
+
+                    // Total count
+                    total = raw_entries.len();
+
+                    // Apply paging
+                    let end = std::cmp::min(offset + limit, total);
+                    if offset < total {
+                        for (rel, type_str) in &raw_entries[offset..end] {
+                            entries.push(json!({
+                                "path": rel,
+                                "type": type_str,
+                            }));
+
+                            // Touch child if file?
+                            if type_str == "file" {
+                                self.lease_store.touch_files(&lid, vec![rel.clone()]);
+                            }
                         }
                     }
                 }
+            } else {
+                total = 0;
             }
 
-            // Sort entries lexicographically
-            entries.sort_by(|a, b| {
-                let pa = a.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                let pb = b.get("path").and_then(|v| v.as_str()).unwrap_or("");
-                pa.cmp(pb)
-            });
+            // Re-sort handled above
 
             let fp = self.lease_store.get_fingerprint(&lid).unwrap();
 
             Ok(json!({
-                "snapshot_id": "sha256:TODO_FOR_WORKTREE_MODE_OR_OMITTED", // Schema requires snapshot_id?
-                // Wait, schema for worktree success says: snapshot_id required?
-                // If worktree mode, creating a snapshot is optional?
-                // No, usually "snapshot_id" in list response is strictly for snapshot mode?
-                // Let's check schema. `snapshot.list.response.schema.json`.
-                // Worktree branch: `snapshot_id`, `path`, `mode`, `entries`...
-                // Why snapshot_id in worktree? Maybe "id of the worktree state"?
-                // Or maybe just "sha256:..." stub? Or the fingerprint hash?
-                // Spec says: "snapshot_id = sha256(fingerprint + manifest)".
-                // We can compute a "virtual" snapshot ID if we wanted, but expensive for list.
-                // We'll put a placeholder or compute minimal?
-                // Actually, the schema requires it. I'll output fingerprint-based ID or just "sha256:0000..." if allowed?
-                // Pattern is strict sha256.
-                // I will compute `snapshot_id` from fingerprint + empty manifest or just fingerprint?
-                // Actually, if we haven't created a snapshot, we don't have an ID.
-                // Maybe I should fix schema or use a dummy?
-                // I'll use a dummy valid SHA for now to pass schema.
-                // Use fingerprint as stable worktree ID (for UI mostly)
                 "snapshot_id": format!("sha256:{}", fp.status_hash),
                 "path": path,
                 "mode": "worktree",
                 "entries": entries,
-                "truncated": false, // paging not implemented yet
+                "total": total,
+                "truncated": (offset + limit) < total,
                 "lease_id": lid,
                 "fingerprint": fp,
                 "cache_key": format!("{}:{}", lid, fp.status_hash),
@@ -191,37 +179,28 @@ impl SnapshotTools {
             let snap_id =
                 snapshot_id.ok_or_else(|| anyhow!("snapshot_id required for snapshot mode"))?;
 
-            // Validate snapshot integrity first
             self.store.validate_snapshot(&snap_id)?;
-
             let manifest_entries = self.store.list_snapshot_entries(&snap_id)?;
-
-            // Filter by prefix/path?
-            // "Only lists captured paths ... Implicit parents".
-            // If path is "", list all entries? Or just top level?
-            // Usually user expects hierarchy.
-            // If path provided, list children?
-            // The entries are flattened.
-
-            // 1. Filter entries starting with path
-            // 2. Determine immediate children
 
             let mut result_entries = Vec::new();
             let mut dirs_seen = std::collections::HashSet::new();
 
-            for entry in manifest_entries {
-                // Ensure path is valid (should be covered by validate_snapshot but good to be safe)
-                // Store::validate_path(&entry.path)?;
+            // We need to filter ALL first to sort and page deterministically.
+            // Streaming/iterator approach is harder with sort requirement unless source is sorted.
+            // Manifest is sorted by path? Yes.
+            // But we filter by prefix.
 
+            let mut temp_entries = Vec::new();
+
+            for entry in manifest_entries {
                 if path.is_empty() || entry.path.starts_with(path) {
                     let relative = if path.is_empty() {
                         entry.path.clone()
                     } else {
                         if entry.path == path {
-                            continue; // Use file() to get the file itself?
+                            continue;
                         }
                         if !entry.path.starts_with(&format!("{}/", path)) {
-                            // Sibling or partial match, ignore
                             continue;
                         }
                         entry
@@ -231,18 +210,15 @@ impl SnapshotTools {
                             .to_string()
                     };
 
-                    // If relative contains '/', it's a deep file.
-                    // We only want immediate children.
                     if let Some((dir, _)) = relative.split_once('/') {
                         if dirs_seen.insert(dir.to_string()) {
-                            result_entries.push(json!({
+                            temp_entries.push(json!({
                                  "path": if path.is_empty() { dir.to_string() } else { format!("{}/{}", path, dir) },
                                  "type": "dir"
                              }));
                         }
                     } else {
-                        // It's a file
-                        result_entries.push(json!({
+                        temp_entries.push(json!({
                             "path": entry.path,
                             "type": "file",
                             "size": entry.size,
@@ -252,19 +228,26 @@ impl SnapshotTools {
                 }
             }
 
-            // Sort
-            result_entries.sort_by(|a, b| {
+            temp_entries.sort_by(|a, b| {
                 let pa = a.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 let pb = b.get("path").and_then(|v| v.as_str()).unwrap_or("");
                 pa.cmp(pb)
             });
+
+            let total = temp_entries.len();
+            let end = std::cmp::min(offset + limit, total);
+
+            if offset < total {
+                result_entries.extend_from_slice(&temp_entries[offset..end]);
+            }
 
             Ok(json!({
                 "snapshot_id": snap_id,
                 "path": path,
                 "mode": "snapshot",
                 "entries": result_entries,
-                "truncated": false,
+                "truncated": (offset + limit) < total, // Simple check
+                "total": total,
                 "cache_key": snap_id,
                 "cache_hint": "immutable"
             }))
@@ -336,6 +319,9 @@ impl SnapshotTools {
             &fp.head_oid,
             &fp_json,
             &manifest_bytes,
+            None,
+            None,
+            None,
         )?;
 
         Ok(json!({
@@ -550,7 +536,8 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else {
-            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid =
+                snapshot_id.ok_or_else(|| anyhow!("snapshot_id required in snapshot mode"))?;
             // Validate snapshot integrity first
             self.store.validate_snapshot(&sid)?;
 
@@ -677,7 +664,8 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {
-            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid =
+                snapshot_id.ok_or_else(|| anyhow!("snapshot_id required in snapshot mode"))?;
             self.store.validate_snapshot(&sid)?;
 
             // Get content from target snapshot
@@ -910,16 +898,48 @@ impl SnapshotTools {
         }))
     }
 
-    pub fn snapshot_info(&self, repo_root: &Path) -> Result<serde_json::Value> {
-        let fp = Fingerprint::compute(repo_root)?;
-        Ok(json!({
-           "fingerprint": fp,
-           "manifest_stats": {
-               "files": 0,
-               "bytes": 0
-           },
-           "cache_hint": "until_dirty"
-        }))
+    pub fn snapshot_info(
+        &self,
+        repo_root: &Path,
+        snapshot_id: Option<String>,
+    ) -> Result<serde_json::Value> {
+        // If snapshot_id provided, return details about THAT snapshot (metadata, lineage)
+        if let Some(sid) = snapshot_id {
+            let info = self
+                .store
+                .get_snapshot_info(&sid)?
+                .ok_or_else(|| anyhow!("Snapshot not found: {}", sid))?;
+
+            // Retrieve stats via manifest? Or just computed?
+            // Store saves manifest_hash but not stats directly in snapshots table (only in blobs refcounts or separate entry count).
+            // We can do a quick list to get count/size if needed, but SnapshotInfo doesn't have it.
+            // Let's rely on info structure.
+
+            Ok(json!({
+                "snapshot_id": info.snapshot_id,
+                "repo_root": info.repo_root,
+                "head_sha": info.head_sha,
+                "created_at": info.created_at,
+                "manifest_hash": info.manifest_hash,
+                "derived_from": info.derived_from,
+                "applied_patch_hash": info.applied_patch_hash,
+                "label": info.label,
+                "cache_hint": "immutable"
+            }))
+        } else {
+            // Original behavior: return repo fingerprint/status
+            let fp = Fingerprint::compute(repo_root)?;
+            Ok(json!({
+                "fingerprint": fp,
+                // "manifest_stats": ... // Deprecated or kept for compat?
+                // Keeping for now matching previous behavior
+                "manifest_stats": {
+                    "files": 0,
+                    "bytes": 0
+                },
+                "cache_hint": "until_dirty"
+            }))
+        }
     }
 }
 
@@ -980,9 +1000,12 @@ mod tests {
             .put_snapshot(
                 sid,
                 dir.path().to_str().unwrap(),
-                "sha-HEAD",
+                "h1",
                 "{}",
                 manifest_bytes.as_bytes(),
+                None,
+                None,
+                None,
             )
             .unwrap();
 
@@ -1073,6 +1096,9 @@ mod tests {
                 "h1",
                 "{}",
                 m1.as_bytes(),
+                None,
+                None,
+                None,
             )
             .unwrap();
 
@@ -1106,6 +1132,9 @@ mod tests {
                 "h2",
                 "{}",
                 m2.as_bytes(),
+                None,
+                None,
+                None,
             )
             .unwrap();
 
@@ -1199,7 +1228,16 @@ mod tests {
 
         let sid = "snap-export";
         store
-            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .put_snapshot(
+                sid,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+                None,
+                None,
+                None,
+            )
             .unwrap();
 
         // Export
@@ -1289,6 +1327,9 @@ mod tests {
                 "h1",
                 "{}",
                 m1.as_bytes(),
+                None,
+                None,
+                None,
             )
             .unwrap();
 
@@ -1319,6 +1360,9 @@ mod tests {
                 "h2",
                 "{}",
                 m2.as_bytes(),
+                None,
+                None,
+                None,
             )
             .unwrap();
 

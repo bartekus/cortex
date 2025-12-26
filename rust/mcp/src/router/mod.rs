@@ -96,7 +96,7 @@ impl Router {
                         },
                         {
                             "name": "snapshot.list",
-                            "description": "List files in a snapshot or worktree",
+                            "description": "List files in a snapshot or worktree. Supports pagination via limit/offset.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -104,14 +104,16 @@ impl Router {
                                     "path": { "type": "string" },
                                     "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
                                     "lease_id": { "type": "string" },
-                                    "snapshot_id": { "type": "string" }
+                                    "snapshot_id": { "type": "string" },
+                                    "limit": { "type": "integer" },
+                                    "offset": { "type": "integer" }
                                 },
                                 "required": ["repo_root", "path", "mode"]
                             }
                         },
                         {
                             "name": "snapshot.file",
-                            "description": "Read a file from snapshot or worktree",
+                            "description": "Read a file from snapshot or worktree. In worktree mode, returns a mutable 'snapshot_id' (hash of state) and 'until_dirty' cache hint.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -143,7 +145,7 @@ impl Router {
                         },
                         {
                             "name": "workspace.apply_patch",
-                            "description": "Apply a patch",
+                            "description": "Apply a patch. In snapshot mode, returns a NEW snapshot_id (immutable). In worktree mode, modifies files in place.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -191,11 +193,12 @@ impl Router {
                         },
                         {
                             "name": "snapshot.info",
-                            "description": "Get snapshot info (fingerprint)",
+                            "description": "Get snapshot info (fingerprint or specific snapshot metadata)",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
-                                    "repo_root": { "type": "string" }
+                                    "repo_root": { "type": "string" },
+                                    "snapshot_id": { "type": "string" }
                                 },
                                 "required": ["repo_root"]
                             }
@@ -210,7 +213,7 @@ impl Router {
                                     "snapshot_id": { "type": "string" },
                                     "from_snapshot_id": { "type": "string" }
                                 },
-                                "required": ["repo_root"]
+                                "required": ["repo_root", "snapshot_id"]
                             }
                         },
                         {
@@ -222,7 +225,9 @@ impl Router {
                                     "repo_root": { "type": "string" },
                                     "path": { "type": "string" },
                                     "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
-                                    "lease_id": { "type": "string" }
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" },
+                                    "from_snapshot_id": { "type": "string" }
                                 },
                                 "required": ["repo_root", "path", "mode"]
                             }
@@ -340,6 +345,14 @@ impl Router {
                         let mode = args.get("mode").and_then(|s| s.as_str());
                         let lease_id = args.get("lease_id").and_then(|s| s.as_str());
                         let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
+                        let limit = args
+                            .get("limit")
+                            .and_then(|v| v.as_u64())
+                            .map(|u| u as usize);
+                        let offset = args
+                            .get("offset")
+                            .and_then(|v| v.as_u64())
+                            .map(|u| u as usize);
 
                         if let (Some(root), Some(p), Some(m)) = (repo_root, path, mode) {
                             match self.snapshot_tools.snapshot_list(
@@ -348,6 +361,8 @@ impl Router {
                                 m,
                                 lease_id.map(|s| s.to_string()),
                                 snapshot_id.map(|s| s.to_string()),
+                                limit,
+                                offset,
                             ) {
                                 Ok(res) => json_rpc_ok(
                                     req.id.clone(),
@@ -436,11 +451,12 @@ impl Router {
                     }
                     "snapshot.info" => {
                         let repo_root = args.get("repo_root").and_then(|s| s.as_str());
+                        let snapshot_id = args.get("snapshot_id").and_then(|s| s.as_str());
                         if let Some(root) = repo_root {
-                            match self
-                                .snapshot_tools
-                                .snapshot_info(std::path::Path::new(root))
-                            {
+                            match self.snapshot_tools.snapshot_info(
+                                std::path::Path::new(root),
+                                snapshot_id.map(|s| s.to_string()),
+                            ) {
                                 Ok(res) => json_rpc_ok(
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),

@@ -17,6 +17,19 @@ pub struct Entry {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SnapshotInfo {
+    pub snapshot_id: String,
+    pub repo_root: String,
+    pub head_sha: String,
+    pub fingerprint_json: String,
+    pub manifest_hash: String,
+    pub created_at: Option<i64>,
+    pub derived_from: Option<String>,
+    pub applied_patch_hash: Option<String>,
+    pub label: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Manifest {
     pub entries: Vec<Entry>,
 }
@@ -184,7 +197,10 @@ impl Store {
                 fingerprint_json TEXT NOT NULL,
                 manifest_hash TEXT NOT NULL,
                 manifest_bytes BLOB,
-                created_at INTEGER
+                created_at INTEGER,
+                derived_from TEXT,
+                applied_patch_hash TEXT,
+                label TEXT
             );
             
             CREATE TABLE IF NOT EXISTS manifest_entries (
@@ -278,6 +294,7 @@ impl Store {
 
     // Snapshot Metadata & Manifest
     // Replaces the legacy put_snapshot with a full version
+    #[allow(clippy::too_many_arguments)]
     pub fn put_snapshot(
         &self,
         id: &str,
@@ -285,6 +302,9 @@ impl Store {
         head_sha: &str,
         fingerprint_json: &str,
         manifest_bytes: &[u8],
+        derived_from: Option<&str>,
+        applied_patch_hash: Option<&str>,
+        label: Option<&str>,
     ) -> Result<()> {
         let manifest: Manifest = serde_json::from_slice(manifest_bytes)?;
         let manifest_hash = format!("sha256:{}", hex::encode(Sha256::digest(manifest_bytes)));
@@ -323,14 +343,17 @@ impl Store {
 
         // 2. Insert/Replace snapshot
         tx.execute(
-            "INSERT OR REPLACE INTO snapshots (snapshot_id, repo_root, head_sha, fingerprint_json, manifest_hash, manifest_bytes, created_at) VALUES (?1, ?2, ?3, ?4, ?5, ?6, unixepoch())",
+            "INSERT OR REPLACE INTO snapshots (snapshot_id, repo_root, head_sha, fingerprint_json, manifest_hash, manifest_bytes, created_at, derived_from, applied_patch_hash, label) VALUES (?1, ?2, ?3, ?4, ?5, ?6, unixepoch(), ?7, ?8, ?9)",
             params![
                 id,
                 repo_root,
                 head_sha,
                 fingerprint_json,
                 manifest_hash,
-                manifest_bytes
+                manifest_bytes,
+                derived_from,
+                applied_patch_hash,
+                label
             ]
         )?;
 
@@ -377,6 +400,28 @@ impl Store {
         }
 
         Ok(None)
+    }
+
+    pub fn get_snapshot_info(&self, id: &str) -> Result<Option<SnapshotInfo>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT snapshot_id, repo_root, head_sha, fingerprint_json, manifest_hash, created_at, derived_from, applied_patch_hash, label FROM snapshots WHERE snapshot_id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+
+        if let Some(row) = rows.next()? {
+            Ok(Some(SnapshotInfo {
+                snapshot_id: row.get(0)?,
+                repo_root: row.get(1)?,
+                head_sha: row.get(2)?,
+                fingerprint_json: row.get(3)?,
+                manifest_hash: row.get(4)?,
+                created_at: row.get(5)?,
+                derived_from: row.get(6)?,
+                applied_patch_hash: row.get(7)?,
+                label: row.get(8)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     // List entries from DB (faster than parsing manifest JSON)
@@ -566,7 +611,16 @@ mod tests {
 
         let sid = "snap1";
         store
-            .put_snapshot(sid, "/repo", "headsha", "{}", manifest_bytes.as_bytes())
+            .put_snapshot(
+                sid,
+                "/repo",
+                "headsha",
+                "{}",
+                manifest_bytes.as_bytes(),
+                None,
+                None,
+                None,
+            )
             .unwrap();
 
         // Valid

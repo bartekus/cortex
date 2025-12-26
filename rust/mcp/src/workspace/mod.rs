@@ -2,6 +2,7 @@ use crate::snapshot::lease::Fingerprint;
 use crate::snapshot::lease::LeaseStore;
 use crate::snapshot::store::Store;
 use anyhow::{anyhow, Context, Result};
+use sha2::{Digest, Sha256};
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
@@ -187,6 +188,12 @@ impl WorkspaceTools {
             let snap_id = _snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
             self.store.validate_snapshot(&snap_id)?;
 
+            // Retrieve base snapshot metadata for provenance/determinism
+            let base_info = self
+                .store
+                .get_snapshot_info(&snap_id)?
+                .ok_or_else(|| anyhow::anyhow!("Snapshot metadata not found for {}", snap_id))?;
+
             // 1. Materialize to temp dir
             let temp = tempfile::tempdir()?;
             let temp_path = temp.path();
@@ -249,33 +256,26 @@ impl WorkspaceTools {
                 }
 
                 // Create new snapshot
-                let new_manifest = crate::snapshot::store::Manifest {
-                    entries: new_entries,
-                };
-                let manifest_json = serde_json::to_string(&new_manifest)?;
-                // Generate deterministic ID or random?
-                // Let's use SHA256 of manifest for determinism?
-                // Or UUID? Currently tests use "snap1".
-                // Let's use "snap-" + uuid.
-                use uuid::Uuid;
-                let new_snap_id = format!("snap-{}", Uuid::new_v4());
+                let new_manifest = crate::snapshot::store::Manifest::new(new_entries); // sorts automatically
+                let manifest_json = new_manifest.to_canonical_json()?;
 
-                // Need a way to put snapshot easily. `store.put_snapshot` takes raw args.
-                // We need to re-calc header/etc.
-                // `Store::put_snapshot` expects `manifest_hash`, `manifest_content`.
-                // Compute hash
-                use sha2::{Digest, Sha256};
-                let mut hasher = Sha256::new();
-                hasher.update(manifest_json.as_bytes());
-                let result = hasher.finalize();
-                let manifest_hash = hex::encode(result);
+                // Deterministic ID: sha256(fingerprint + manifest)
+                // Use base snapshot's fingerprint to maintain same "context"
+                let new_snap_id = new_manifest.compute_snapshot_id(&base_info.fingerprint_json)?;
+
+                // Compute patch hash for lineage
+                let patch_hash =
+                    format!("sha256:{}", hex::encode(Sha256::digest(patch.as_bytes())));
 
                 self.store.put_snapshot(
                     &new_snap_id,
-                    repo_root.to_str().unwrap_or(""),
-                    &manifest_hash,
-                    "{}", // Empty meta for now? Or copy old?
+                    &base_info.repo_root,        // Preserve base repo_root
+                    &base_info.head_sha,         // Preserve base head_sha
+                    &base_info.fingerprint_json, // Preserve base fingerprint
                     manifest_json.as_bytes(),
+                    Some(&snap_id),    // derived_from
+                    Some(&patch_hash), // applied_patch_hash
+                    None,              // label
                 )?;
 
                 Ok(serde_json::json!({
@@ -457,7 +457,16 @@ mod tests {
         );
         let sid = "snap-base";
         store
-            .put_snapshot(sid, dir.path().to_str().unwrap(), "h1", "{}", m1.as_bytes())
+            .put_snapshot(
+                sid,
+                dir.path().to_str().unwrap(),
+                "h1",
+                "{}",
+                m1.as_bytes(),
+                None,
+                None,
+                None,
+            )
             .unwrap();
 
         // Patch to modify a.txt and add b.txt
