@@ -17,6 +17,16 @@ pub struct Entry {
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct SnapshotInfo {
+    pub snapshot_id: String,
+    pub repo_root: String,
+    pub head_sha: String,
+    pub fingerprint_json: String,
+    pub manifest_hash: String,
+    pub created_at: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Manifest {
     pub entries: Vec<Entry>,
 }
@@ -377,6 +387,25 @@ impl Store {
         }
 
         Ok(None)
+    }
+
+    pub fn get_snapshot_info(&self, id: &str) -> Result<Option<SnapshotInfo>> {
+        let conn = self.conn.lock().unwrap();
+        let mut stmt = conn.prepare("SELECT snapshot_id, repo_root, head_sha, fingerprint_json, manifest_hash, created_at FROM snapshots WHERE snapshot_id = ?1")?;
+        let mut rows = stmt.query(params![id])?;
+
+        if let Some(row) = rows.next()? {
+            Ok(Some(SnapshotInfo {
+                snapshot_id: row.get(0)?,
+                repo_root: row.get(1)?,
+                head_sha: row.get(2)?,
+                fingerprint_json: row.get(3)?,
+                manifest_hash: row.get(4)?,
+                created_at: row.get(5)?,
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     // List entries from DB (faster than parsing manifest JSON)

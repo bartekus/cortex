@@ -96,7 +96,7 @@ impl Router {
                         },
                         {
                             "name": "snapshot.list",
-                            "description": "List files in a snapshot or worktree",
+                            "description": "List files in a snapshot or worktree. In worktree mode, returns a mutable 'snapshot_id' (hash of state) and 'until_dirty' cache hint.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -111,7 +111,7 @@ impl Router {
                         },
                         {
                             "name": "snapshot.file",
-                            "description": "Read a file from snapshot or worktree",
+                            "description": "Read a file from snapshot or worktree. In worktree mode, returns a mutable 'snapshot_id' (hash of state) and 'until_dirty' cache hint.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -143,7 +143,7 @@ impl Router {
                         },
                         {
                             "name": "workspace.apply_patch",
-                            "description": "Apply a patch",
+                            "description": "Apply a patch. In snapshot mode, returns a NEW snapshot_id (immutable). In worktree mode, modifies files in place.",
                             "inputSchema": {
                                 "type": "object",
                                 "properties": {
@@ -210,7 +210,7 @@ impl Router {
                                     "snapshot_id": { "type": "string" },
                                     "from_snapshot_id": { "type": "string" }
                                 },
-                                "required": ["repo_root"]
+                                "required": ["repo_root", "snapshot_id"]
                             }
                         },
                         {
@@ -222,7 +222,9 @@ impl Router {
                                     "repo_root": { "type": "string" },
                                     "path": { "type": "string" },
                                     "mode": { "type": "string", "enum": ["worktree", "snapshot"] },
-                                    "lease_id": { "type": "string" }
+                                    "lease_id": { "type": "string" },
+                                    "snapshot_id": { "type": "string" },
+                                    "from_snapshot_id": { "type": "string" }
                                 },
                                 "required": ["repo_root", "path", "mode"]
                             }

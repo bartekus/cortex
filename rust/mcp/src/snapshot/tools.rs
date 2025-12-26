@@ -550,7 +550,8 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else {
-            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid =
+                snapshot_id.ok_or_else(|| anyhow!("snapshot_id required in snapshot mode"))?;
             // Validate snapshot integrity first
             self.store.validate_snapshot(&sid)?;
 
@@ -677,7 +678,8 @@ impl SnapshotTools {
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {
-            let sid = snapshot_id.ok_or_else(|| anyhow!("snapshot_id required"))?;
+            let sid =
+                snapshot_id.ok_or_else(|| anyhow!("snapshot_id required in snapshot mode"))?;
             self.store.validate_snapshot(&sid)?;
 
             // Get content from target snapshot
