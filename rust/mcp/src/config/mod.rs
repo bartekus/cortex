@@ -23,9 +23,21 @@ pub struct StorageConfig {
 
 impl Default for StorageConfig {
     fn default() -> Self {
-        let data_dir = dirs::home_dir()
-            .unwrap_or_else(|| PathBuf::from("."))
-            .join(".cortex/data");
+        // Prefer explicit override for tests/CI and power users.
+        if let Ok(val) = std::env::var("CORTEX_DATA_DIR") {
+            let trimmed = val.trim();
+            if !trimmed.is_empty() {
+                return Self {
+                    data_dir: PathBuf::from(trimmed),
+                    blob_backend: BlobBackend::Fs,
+                    compression: Compression::None,
+                };
+            }
+        }
+
+        // Default to project-local storage: <cwd>/.cortex/data
+        let cwd = std::env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let data_dir = cwd.join(".cortex").join("data");
 
         Self {
             data_dir,

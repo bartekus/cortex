@@ -39,6 +39,7 @@ rust/xray/target/
 rust/xray/tests/outputs/
 
 tests/node_modules/
+tests/fixtures/run/_cortex_data
 test-state/
 rust-dist/
 dist/

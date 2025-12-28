@@ -16,12 +16,18 @@ const UPDATE_GOLDEN = process.env.UPDATE_GOLDEN === '1';
 const GOLDEN_DIR = path.resolve(__dirname, '../golden');
 const FIXTURES_DIR = path.resolve(__dirname, '../fixtures/run');
 const REPO_ROOT = path.join(FIXTURES_DIR, 'toy-repo-01');
+const CORTEX_DATA_DIR = path.join(FIXTURES_DIR, '_cortex_data');
 
 // Setup environment
 if (fs.existsSync(FIXTURES_DIR)) {
     fs.rmSync(FIXTURES_DIR, { recursive: true, force: true });
 }
 fs.mkdirSync(FIXTURES_DIR, { recursive: true });
+// Test-local persistent store for cortex-mcp (keeps runs deterministic and avoids polluting repo or home)
+if (fs.existsSync(CORTEX_DATA_DIR)) {
+    fs.rmSync(CORTEX_DATA_DIR, { recursive: true, force: true });
+}
+fs.mkdirSync(CORTEX_DATA_DIR, { recursive: true });
 
 // 1. Schema Lint
 console.log("Running Schema Lint...");
@@ -68,7 +74,7 @@ async function runTestFile(file: string) {
 
     // Spawn server
     const proc = spawn(SERVER_BIN, [], {
-        env: { ...process.env, RUST_LOG: 'debug' }, // Optional logging
+        env: { ...process.env, RUST_LOG: 'debug', CORTEX_DATA_DIR }, // Optional logging
     });
 
     let stdoutBuffer = Buffer.alloc(0);

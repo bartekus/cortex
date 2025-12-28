@@ -32,6 +32,10 @@ fn main() -> Result<()> {
     // 2. Setup Stores & Tools
     // Persistent store
     let config = cortex_mcp::config::StorageConfig::default();
+    eprintln!(
+        "[cortex-mcp] storage data_dir: {}",
+        config.data_dir.display()
+    );
     let store = Arc::new(cortex_mcp::snapshot::store::Store::new(config)?);
 
     // LeaseStore (currently in-memory, Option A)

@@ -23,7 +23,13 @@ fn test_router_contract_routing() {
 
     // db_path removed
     // let db_path = std::env::temp_dir().join("cortex_test_db_router");
-    let config = cortex_mcp::config::StorageConfig::default();
+    use tempfile;
+    let dir = tempfile::tempdir().unwrap();
+    let config = cortex_mcp::config::StorageConfig {
+        data_dir: dir.path().to_path_buf(),
+        blob_backend: cortex_mcp::config::BlobBackend::Fs,
+        compression: cortex_mcp::config::Compression::None,
+    };
     let store = Arc::new(cortex_mcp::snapshot::store::Store::new(config).unwrap());
     let lease_store = Arc::new(LeaseStore::new());
 
