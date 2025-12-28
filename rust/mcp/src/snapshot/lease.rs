@@ -161,6 +161,7 @@ impl LeaseStore {
             // We can return an error that *downcasts* to a StaleLeaseError.
 
             return Err(StaleLeaseError {
+                lease_id: lease_id.to_string(),
                 current_fingerprint: current_fp,
                 msg: "Lease is stale (repo changed)".into(),
             }
@@ -173,6 +174,7 @@ impl LeaseStore {
 
 #[derive(Debug)]
 pub struct StaleLeaseError {
+    pub lease_id: String,
     pub current_fingerprint: Fingerprint,
     pub msg: String,
 }

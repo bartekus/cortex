@@ -28,6 +28,7 @@ pub struct JsonRpcResponse {
     pub id: Option<Value>,
 }
 
+use crate::snapshot::lease::StaleLeaseError;
 use crate::snapshot::tools::SnapshotTools;
 use crate::workspace::WorkspaceTools;
 
@@ -333,7 +334,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
@@ -368,7 +369,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -393,7 +394,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }), // snapshot_file returns json value directly
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -443,7 +444,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -461,7 +462,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
@@ -482,7 +483,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing repo_root")
@@ -510,7 +511,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -529,7 +530,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": res }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -569,7 +570,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": val }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -604,7 +605,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": { "written": res } }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -630,7 +631,7 @@ impl Router {
                                     req.id.clone(),
                                     json!({ "content": [{ "type": "json", "json": { "deleted": res } }] }),
                                 ),
-                                Err(e) => json_rpc_error(req.id.clone(), -32603, &e.to_string()),
+                                Err(e) => map_error(req.id.clone(), e),
                             }
                         } else {
                             json_rpc_error(req.id.clone(), -32602, "Missing required arguments")
@@ -676,5 +677,25 @@ fn json_rpc_error(id: Option<Value>, code: i32, message: &str) -> JsonRpcRespons
         result: None,
         error: Some(json!({ "code": code, "message": message })),
         id,
+    }
+}
+
+fn map_error(id: Option<Value>, e: anyhow::Error) -> JsonRpcResponse {
+    if let Some(sle) = e.downcast_ref::<StaleLeaseError>() {
+        JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: None,
+            error: Some(json!({
+                "code": "STALE_LEASE",
+                "message": sle.msg,
+                "data": {
+                    "current_fingerprint": sle.current_fingerprint,
+                    "lease_id": sle.lease_id // Ensure StaleLeaseError has lease_id public
+                }
+            })),
+            id,
+        }
+    } else {
+        json_rpc_error(id, -32603, &e.to_string())
     }
 }
