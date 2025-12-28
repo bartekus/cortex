@@ -171,7 +171,7 @@ impl SnapshotTools {
                 "truncated": (offset + limit) < total,
                 "lease_id": lid,
                 "fingerprint": fp,
-                "cache_key": format!("{}:{}", lid, fp.status_hash),
+                "cache_key": format!("{}:sha256:{}", lid, fp.status_hash),
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {
@@ -380,7 +380,7 @@ impl SnapshotTools {
                 "sha": blob_hash,
                 "lease_id": lid,
                 "fingerprint": fp,
-                "cache_key": format!("{}:{}", lid, fp.status_hash), // Simple cache key
+                "cache_key": format!("{}:sha256:{}", lid, fp.status_hash), // Simple cache key
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {
@@ -532,7 +532,7 @@ impl SnapshotTools {
                 "truncated": truncated,
                 "lease_id": lid,
                 "fingerprint": fp,
-                "cache_key": format!("{}:grep:{}:{}", lid, pattern, fp.status_hash),
+                "cache_key": format!("{}:grep:{}:sha256:{}", lid, pattern, fp.status_hash),
                 "cache_hint": "until_dirty"
             }))
         } else {
@@ -660,7 +660,7 @@ impl SnapshotTools {
                 "diff": diff_text,
                 "lease_id": lid,
                 "fingerprint": fp,
-                "cache_key": format!("{}:diff:{}", lid, fp.status_hash),
+                "cache_key": format!("{}:diff:sha256:{}", lid, fp.status_hash),
                 "cache_hint": "until_dirty"
             }))
         } else if mode == "snapshot" {

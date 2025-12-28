@@ -31,7 +31,7 @@ all: clean fmt-check lint test build context docs reports gov
 check: validate-and-build;
 
 clean:
-	@rm -rf .cortex docs/__generated__
+	@rm -rf .cortex docs/__generated__ tests/fixtures/run/_cortex_data
 
 docs: build
 	@echo " "

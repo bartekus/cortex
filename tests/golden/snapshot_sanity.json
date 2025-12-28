@@ -54,7 +54,7 @@
                                 "fingerprint": {
                                     "head_oid": "96b5c0893afecee8b85ece82b1a82ce15fe5ec1b",
                                     "index_oid": "f065f5b45ebfb7c38dc0d4b2feb8875d004c6dfb",
-                                    "status_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                    "status_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                                 },
                                 "manifest_stats": {
                                     "bytes": 0,
@@ -104,12 +104,12 @@
                                 "fingerprint": {
                                     "head_oid": "96b5c0893afecee8b85ece82b1a82ce15fe5ec1b",
                                     "index_oid": "f065f5b45ebfb7c38dc0d4b2feb8875d004c6dfb",
-                                    "status_hash": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+                                    "status_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
                                 },
                                 "lease_id": "<UUID>",
                                 "mode": "worktree",
                                 "path": ".",
-                                "snapshot_id": "sha256:sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                                "snapshot_id": "sha256:e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "total": 2,
                                 "truncated": false
                             },
@@ -134,23 +134,23 @@
                 }
             },
             "response": {
-              "jsonrpc": "2.0",
-              "result": {
-                "content": [
-                  {
-                    "json": {
-                      "cache_hint": "immutable",
-                      "cache_key": "sha256:80ca077e80b9165c0c98c05ab8bb59d5f14dc9f771a015ebc6fc1e65a65b192b",
-                      "head_sha": "96b5c0893afecee8b85ece82b1a82ce15fe5ec1b",
-                      "repo_root": "__REPO_ROOT__",
-                      "snapshot_id": "sha256:80ca077e80b9165c0c98c05ab8bb59d5f14dc9f771a015ebc6fc1e65a65b192b"
-                    },
-                    "type": "json"
-                  }
-                ]
-              },
-              "error": null,
-              "id": 4
+                "jsonrpc": "2.0",
+                "result": {
+                    "content": [
+                        {
+                            "json": {
+                                "cache_hint": "immutable",
+                                "cache_key": "sha256:ab8e276bbdf315853db202f46bbea6427a77d47dbf08c407b2acff41a238b421",
+                                "head_sha": "96b5c0893afecee8b85ece82b1a82ce15fe5ec1b",
+                                "repo_root": "__REPO_ROOT__",
+                                "snapshot_id": "sha256:ab8e276bbdf315853db202f46bbea6427a77d47dbf08c407b2acff41a238b421"
+                            },
+                            "type": "json"
+                        }
+                    ]
+                },
+                "error": null,
+                "id": 4
             }
         }
     ]

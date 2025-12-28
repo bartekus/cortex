@@ -63,10 +63,7 @@ impl Fingerprint {
             return Err(anyhow!("Failed to run git status"));
         }
 
-        let status_hash = format!(
-            "sha256:{}",
-            hex::encode(Sha256::digest(&status_output.stdout))
-        );
+        let status_hash = hex::encode(Sha256::digest(&status_output.stdout));
 
         Ok(Self {
             head_oid,

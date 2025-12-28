@@ -153,7 +153,7 @@ impl WorkspaceTools {
                     "rejects": [],
                     "lease_id": lid,
                     "fingerprint": new_fingerprint,
-                    "cache_key": format!("{}:{}", lid, new_fingerprint.status_hash),
+                    "cache_key": format!("{}:sha256:{}", lid, new_fingerprint.status_hash),
                     "cache_hint": "until_dirty"
                 }))
             } else {
@@ -314,9 +314,14 @@ impl WorkspaceTools {
         let target = self.resolve_target_path(repo_root, path)?;
 
         use base64::{engine::general_purpose, Engine as _};
-        let content = general_purpose::STANDARD
-            .decode(content_base64)
-            .context("Invalid base64 content")?;
+        let content = if let Some(rest) = content_base64.strip_prefix("base64:") {
+            general_purpose::STANDARD
+                .decode(rest)
+                .context("Invalid base64 content")?
+        } else {
+            // accept plain text
+            content_base64.as_bytes().to_vec()
+        };
 
         if let Some(parent) = target.parent() {
             if !parent.exists() {
