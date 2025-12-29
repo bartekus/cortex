@@ -4,6 +4,15 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::Duration;
 
+struct ChildGuard(std::process::Child);
+
+impl Drop for ChildGuard {
+    fn drop(&mut self) {
+        let _ = self.0.kill();
+        let _ = self.0.wait();
+    }
+}
+
 #[test]
 fn test_stdio_integrity() {
     // 1. Locate the binary using Cargo's environment variable
@@ -11,17 +20,19 @@ fn test_stdio_integrity() {
     let bin_path = env!("CARGO_BIN_EXE_cortex-mcp");
 
     // 2. Spawn the process
-    let mut child = Command::new(bin_path)
-        .env("RUST_LOG", "info") // Force info logging
-        .stdin(Stdio::piped())
-        .stdout(Stdio::piped())
-        .stderr(Stdio::piped())
-        .spawn()
-        .expect("Failed to spawn cortex-mcp");
+    let mut child = ChildGuard(
+        Command::new(bin_path)
+            .env("RUST_LOG", "info") // Force info logging
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .spawn()
+            .expect("Failed to spawn cortex-mcp"),
+    );
 
-    let mut stdin = child.stdin.take().expect("Failed to open stdin");
-    let mut stdout = BufReader::new(child.stdout.take().expect("Failed to open stdout"));
-    let stderr = BufReader::new(child.stderr.take().expect("Failed to open stderr"));
+    let mut stdin = child.0.stdin.take().expect("Failed to open stdin");
+    let mut stdout = BufReader::new(child.0.stdout.take().expect("Failed to open stdout"));
+    let stderr = BufReader::new(child.0.stderr.take().expect("Failed to open stderr"));
 
     // 3. Setup Stderr Reader Thread (Prevents Deadlock)
     // We want to verify logs appear, but we shouldn't block main thread reading them.
@@ -107,7 +118,4 @@ fn test_stdio_integrity() {
             panic!("Timed out waiting for startup log on stderr. Is logging configured correctly?")
         }
     }
-
-    // Cleanup
-    child.kill().ok();
 }

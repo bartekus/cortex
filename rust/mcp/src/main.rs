@@ -125,14 +125,8 @@ fn read_mcp_message<R: BufRead + Read>(r: &mut R) -> Result<Option<String>> {
     let trimmed = first_line.trim_end_matches(['\r', '\n']);
 
     // Line-delimited JSON fallback for dev/testing.
-    if trimmed.starts_with('{') {
-        if std::env::var("CORTEX_MCP_ALLOW_LINE_JSON").is_ok() {
-            return Ok(Some(trimmed.to_string()));
-        }
-        // If strict, we fall through and likely fail parsing headers, which is correct.
-        // Or we could return an error here if strictness implies NO fallback.
-        // Protocol specifies Content-Length. If it starts with {, it's likely not a header.
-        // We will try to parse "{" as a header key/val and fail.
+    if trimmed.starts_with('{') && std::env::var("CORTEX_MCP_ALLOW_LINE_JSON").is_ok() {
+        return Ok(Some(trimmed.to_string()));
     }
 
     // Otherwise, treat it as the start of headers.
