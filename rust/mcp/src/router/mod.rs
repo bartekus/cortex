@@ -29,6 +29,52 @@ pub struct JsonRpcResponse {
 }
 
 use crate::snapshot::lease::StaleLeaseError;
+
+/// CortexError represents MCP-level errors that are surfaced to clients using
+/// string error codes defined by the MCP common schema.
+///
+/// NOTE: We intentionally avoid adding new dependencies here (e.g. `thiserror`).
+#[derive(Debug)]
+pub enum CortexError {
+    NotFound(String),
+    InvalidArgument(String),
+    RepoChanged(String),
+    PermissionDenied(String),
+    TooLarge(String),
+    Internal(String),
+}
+
+impl CortexError {
+    pub fn code(&self) -> &'static str {
+        match self {
+            CortexError::NotFound(_) => "NOT_FOUND",
+            CortexError::InvalidArgument(_) => "INVALID_ARGUMENT",
+            CortexError::RepoChanged(_) => "REPO_CHANGED",
+            CortexError::PermissionDenied(_) => "PERMISSION_DENIED",
+            CortexError::TooLarge(_) => "TOO_LARGE",
+            CortexError::Internal(_) => "INTERNAL",
+        }
+    }
+
+    fn message(&self) -> &str {
+        match self {
+            CortexError::NotFound(m)
+            | CortexError::InvalidArgument(m)
+            | CortexError::RepoChanged(m)
+            | CortexError::PermissionDenied(m)
+            | CortexError::TooLarge(m)
+            | CortexError::Internal(m) => m.as_str(),
+        }
+    }
+}
+
+impl std::fmt::Display for CortexError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.message())
+    }
+}
+
+impl std::error::Error for CortexError {}
 use crate::snapshot::tools::SnapshotTools;
 use crate::workspace::WorkspaceTools;
 
@@ -681,8 +727,9 @@ fn json_rpc_error(id: Option<Value>, code: i32, message: &str) -> JsonRpcRespons
 }
 
 fn map_error(id: Option<Value>, e: anyhow::Error) -> JsonRpcResponse {
+    // Preserve the dedicated schema/code for stale leases.
     if let Some(sle) = e.downcast_ref::<StaleLeaseError>() {
-        JsonRpcResponse {
+        return JsonRpcResponse {
             jsonrpc: "2.0".to_string(),
             result: None,
             error: Some(json!({
@@ -690,12 +737,34 @@ fn map_error(id: Option<Value>, e: anyhow::Error) -> JsonRpcResponse {
                 "message": sle.msg,
                 "data": {
                     "current_fingerprint": sle.current_fingerprint,
-                    "lease_id": sle.lease_id // Ensure StaleLeaseError has lease_id public
+                    "lease_id": sle.lease_id
                 }
             })),
             id,
-        }
-    } else {
-        json_rpc_error(id, -32603, &e.to_string())
+        };
+    }
+
+    // Map well-known MCP schema errors.
+    if let Some(ce) = e.downcast_ref::<CortexError>() {
+        return JsonRpcResponse {
+            jsonrpc: "2.0".to_string(),
+            result: None,
+            error: Some(json!({
+                "code": ce.code(),
+                "message": ce.to_string(),
+            })),
+            id,
+        };
+    }
+
+    // Default: unknown errors are INTERNAL.
+    JsonRpcResponse {
+        jsonrpc: "2.0".to_string(),
+        result: None,
+        error: Some(json!({
+            "code": "INTERNAL",
+            "message": e.to_string(),
+        })),
+        id,
     }
 }
