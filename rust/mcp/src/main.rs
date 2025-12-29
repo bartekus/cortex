@@ -2,6 +2,7 @@ use anyhow::{anyhow, Result};
 use cortex_mcp::io::fs::RealFs;
 use cortex_mcp::resolver::order::ResolveEngine;
 use cortex_mcp::router::{JsonRpcRequest, Router};
+use env_logger::Target;
 use std::io::{self, BufRead, Read, Write};
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -9,8 +10,20 @@ use std::sync::Arc;
 // Feature: MCP_ROUTER_CONTRACT
 // Spec: spec/mcp/contract.md
 
+// POLICY: stdout is RESERVED for protocol messages.
+// All logs, panics, and diagnostics MUST write to stderr.
 fn main() -> Result<()> {
-    eprintln!("cortex-mcp starting (stdio - MCP framed JSON-RPC)");
+    // 0. Setup Logging & Panic Safety
+    env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
+        .target(Target::Stderr)
+        .format_timestamp(None) // Stable tests
+        .init();
+
+    std::panic::set_hook(Box::new(|info| {
+        log::error!("Panic: {}", info);
+    }));
+
+    log::info!("cortex-mcp starting (stdio - MCP framed JSON-RPC)");
 
     // 1. Setup Resolver
     let dirs = match std::env::var("CORTEX_WORKSPACE_ROOTS") {
@@ -32,7 +45,7 @@ fn main() -> Result<()> {
     // 2. Setup Stores & Tools
     // Persistent store
     let config = cortex_mcp::config::StorageConfig::default();
-    eprintln!(
+    log::info!(
         "[cortex-mcp] storage data_dir: {}",
         config.data_dir.display()
     );
@@ -60,7 +73,8 @@ fn main() -> Result<()> {
     // 4. Stdio Loop (MCP framing)
     let stdin = io::stdin();
     let mut input = stdin.lock();
-    let mut stdout = io::stdout();
+    let stdout = io::stdout();
+    let mut stdout = stdout.lock();
 
     loop {
         let maybe_payload = read_mcp_message(&mut input)?;
@@ -76,7 +90,7 @@ fn main() -> Result<()> {
             }
             Err(e) => {
                 // IMPORTANT: Some clients will send other traffic; log but don't crash.
-                eprintln!("Failed to parse JSON-RPC payload: {}", e);
+                log::error!("Failed to parse JSON-RPC payload: {}", e);
             }
         }
     }
@@ -92,7 +106,7 @@ fn main() -> Result<()> {
 ///   <n bytes of JSON>
 ///
 /// For local diagnostics, we also accept a single-line JSON payload (line-delimited)
-/// when the first non-empty line starts with '{'.
+/// **IF AND ONLY IF** `CORTEX_MCP_ALLOW_LINE_JSON` is set.
 fn read_mcp_message<R: BufRead + Read>(r: &mut R) -> Result<Option<String>> {
     let mut first_line = String::new();
 
@@ -112,12 +126,18 @@ fn read_mcp_message<R: BufRead + Read>(r: &mut R) -> Result<Option<String>> {
 
     // Line-delimited JSON fallback for dev/testing.
     if trimmed.starts_with('{') {
-        return Ok(Some(trimmed.to_string()));
+        if std::env::var("CORTEX_MCP_ALLOW_LINE_JSON").is_ok() {
+            return Ok(Some(trimmed.to_string()));
+        }
+        // If strict, we fall through and likely fail parsing headers, which is correct.
+        // Or we could return an error here if strictness implies NO fallback.
+        // Protocol specifies Content-Length. If it starts with {, it's likely not a header.
+        // We will try to parse "{" as a header key/val and fail.
     }
 
     // Otherwise, treat it as the start of headers.
     let mut content_length: Option<usize> = None;
-    parse_header_line(trimmed, &mut content_length);
+    parse_header_line(trimmed, &mut content_length)?;
 
     // Read remaining headers until blank line.
     loop {
@@ -132,7 +152,7 @@ fn read_mcp_message<R: BufRead + Read>(r: &mut R) -> Result<Option<String>> {
             break;
         }
 
-        parse_header_line(l, &mut content_length);
+        parse_header_line(l, &mut content_length)?;
     }
 
     let len = content_length.ok_or_else(|| anyhow!("Missing Content-Length header"))?;
@@ -144,7 +164,7 @@ fn read_mcp_message<R: BufRead + Read>(r: &mut R) -> Result<Option<String>> {
     Ok(Some(s))
 }
 
-fn parse_header_line(line: &str, content_length: &mut Option<usize>) {
+fn parse_header_line(line: &str, content_length: &mut Option<usize>) -> Result<()> {
     // Keep this deterministic and strict.
     // We accept both `Content-Length:` and `content-length:`.
     let lower = line.to_ascii_lowercase();
@@ -152,8 +172,11 @@ fn parse_header_line(line: &str, content_length: &mut Option<usize>) {
         let v = rest.trim();
         if let Ok(n) = v.parse::<usize>() {
             *content_length = Some(n);
+        } else {
+            return Err(anyhow!("Invalid Content-Length value: {}", v));
         }
     }
+    Ok(())
 }
 
 fn write_mcp_message<W: Write>(w: &mut W, payload: &[u8]) -> Result<()> {

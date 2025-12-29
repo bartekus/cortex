@@ -53,3 +53,4 @@ bin/cortex-mcp
 
 lint_output.txt
 _mcp_smoke_test*.txt
+std*.txt
